@@ -1,4 +1,6 @@
 # worktree-aid
+[![PyPi](https://img.shields.io/pypi/v/worktree-aid)](https://pypi.org/project/worktree-aid/)
+[![AUR](https://img.shields.io/aur/version/worktree-aid)](https://aur.archlinux.org/packages/worktree-aid/)
 
 This is a Linux command line tool to conveniently add, remove, and change
 directories for [git worktrees][gitw]. A [fuzzy finder][fzf] is used to show
