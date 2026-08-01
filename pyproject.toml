@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "worktree-aid"
+description = "Linux command line tool to aid creating, switching, and removing git worktrees"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.10"
+keywords = ["git", "worktree", "fzf"]
+dynamic = ["version"]
+dependencies = [
+  "coolname",
+]
+
+[[project.authors]]
+name = "Mark Blakeney"
+email = "mark.blakeney@bullet-systems.net"
+
+[project.urls]
+Homepage = "https://github.com/bulletmark/worktree-aid"
+
+[project.scripts]
+worktree-aid = "worktree_aid:main"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+ignore = ["SIM115", "SIM905", "BLE001", "PLW1510"]
+
+# vim:se sw=2:

@@ -1,0 +1,9 @@
+README.html
+Session.vim
+build/
+dist/
+.vscode/
+.idea/
+*.egg-info/
+*.pyc
+__pycache__/
