@@ -78,11 +78,11 @@ def run(
     cmd: Sequence[str],
     *,
     stdin: str | None = None,
-    capture: bool = True,
+    stdout: Any = subprocess.PIPE,
     ignore_error: bool = False,
 ) -> str:
     "Run command and return stdout"
-    stdout = subprocess.PIPE if capture else open('/dev/tty', 'w')
+    capture = stdout == subprocess.PIPE
     try:
         res = subprocess.run(cmd, stdout=stdout, text=capture, input=stdin)
     except Exception as e:
@@ -94,7 +94,6 @@ def run(
     if capture:
         return res.stdout.strip()
 
-    stdout.close()  # type: ignore
     return ''
 
 
@@ -129,7 +128,7 @@ def generate_new_name(exists: Callable[[str], Any]) -> str:
     sys.exit('error: failed to generate a new worktree name.')
 
 
-def print_version(args: Namespace) -> int:
+def print_version(args: Namespace) -> None:
     "Print program version"
     from importlib import metadata
 
@@ -138,24 +137,15 @@ def print_version(args: Namespace) -> int:
     except Exception:
         version = '?'
 
-    if args._:
-        with open('/dev/tty', 'w') as tty:
-            print(version, file=tty)
-
-        return 2
-
-    print(version)
-    return 0
+    print(version, file=args._stdout)
 
 
-def print_help(args: Namespace) -> int:
+def print_help(args: Namespace) -> None:
     "Print program help message"
     if 'parser' in args:
         args.parser.print_help(sys.stderr)
     else:
         args._opt.print_help(sys.stderr)
-
-    return 2 if args._ else 0
 
 
 @dataclass
@@ -279,7 +269,7 @@ class Trees:
         cmd = 'git worktree add'.split()
         if args.detach:
             cmd.append('--detach')
-        run(cmd + [str(path)], capture=False)
+        run(cmd + [str(path)], stdout=args._stdout)
         return path
 
     @classmethod
@@ -300,15 +290,14 @@ class Trees:
         if args.force:
             cmd.append('--force')
 
-        run(cmd + [str(tree.path)], capture=False)
+        run(cmd + [str(tree.path)], stdout=args._stdout)
 
         path_display = os.path.relpath(tree.path) if args.relative else str(tree.path)
-        with open('/dev/tty', 'w') as tty:
-            print(f'Removed worktree "{path_display}"', file=tty)
+        print(f'Removed worktree "{path_display}"', file=args._stdout)
 
         if tree.branch and not args.keep_branch:
             cmd = 'git branch'.split() + ['-D' if args.force else '-d']
-            run(cmd + [tree.branch], capture=False, ignore_error=True)
+            run(cmd + [tree.branch], stdout=args._stdout, ignore_error=True)
 
         return cls.toplevel.path if tree == cls.current else None
 
@@ -402,14 +391,19 @@ def main() -> int:
 
     args = opt.parse_args()
     args._opt = opt
+    if args._:
+        try:
+            args._stdout = open('/dev/tty', 'w')
+        except Exception as e:
+            sys.exit(f'error: can not write to terminal in shell function mode: {e}')
+    else:
+        args._stdout = sys.stdout
 
     if args.version:
-        return print_version(args)
-
-    if args.help or 'func' not in args:
-        return print_help(args)
-
-    if out := args.func(args):
+        print_version(args)
+    elif args.help or 'func' not in args:
+        print_help(args)
+    elif out := args.func(args):
         print(out)
         return 0
 
@@ -528,9 +522,8 @@ class ls_:
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
         trees = Trees.get_trees()
-        with open('/dev/tty', 'w') as tty:
-            for line in reversed(trees):
-                print(line, file=tty)
+        for line in reversed(trees):
+            print(line, file=args._stdout)
 
         return None
 
