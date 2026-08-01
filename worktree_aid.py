@@ -34,9 +34,6 @@ DEFAULT_FUZZY = 'fzf'
 # directory.
 BASEDIR = '../worktrees/{repo}'
 
-# Set of worktree names that are shortcuts to the top-level worktree.
-TOPLEVEL_SHORTCUTS = {'/'}
-
 # Template for the shell code injected into user's shell session
 SHELLCODE = """
 !cmd() {
@@ -492,15 +489,15 @@ class cd_:
             'worktree',
             default='',
             nargs='?',
-            help='Worktree name to change directory to. If not specified then '
-            'fuzzy finder will prompt with a list of worktrees.',
+            help='Worktree name to change directory to. "/" is a shortcut to base repository/worktree. '
+            'If not specified then fuzzy finder will prompt with a list of worktrees.',
         )
 
     @staticmethod
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
         if name := args.worktree:
-            if name in TOPLEVEL_SHORTCUTS:
+            if name == '/':
                 path = Trees.toplevel.path
             elif tree := Trees.get_tree(name):
                 path = tree.path

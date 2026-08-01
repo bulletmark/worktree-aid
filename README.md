@@ -112,8 +112,9 @@ usage: wt cd [-h] [worktree]
 Change directory to specified worktree.
 
 positional arguments:
-  worktree    Worktree name to change directory to. If not specified then
-              fuzzy finder will prompt with a list of worktrees.
+  worktree    Worktree name to change directory to. "/" is a shortcut to base
+              repository/worktree. If not specified then fuzzy finder will
+              prompt with a list of worktrees.
 
 options:
   -h, --help  show help message and exit
