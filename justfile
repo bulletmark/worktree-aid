@@ -4,7 +4,7 @@ check:
   ruff check {{PYFILES}}
   ty check {{PYFILES}}
   vermin -vv --no-tips -i {{PYFILES}}
-  #md-link-checker
+  md-link-checker
 
 build:
   rm -rf dist

@@ -174,7 +174,7 @@ $ yay -S worktree-aid  # or your preferred AUR helper
 
 You also need to install a fuzzy finder program such as [`fzf`][fzf] which is
 the default used by `worktree-aid`. See [fuzzy finder installation
-instructions](fuzzy-finder-installation) for possible alternatives.
+instructions](#fuzzy-finder-integration) for possible alternatives.
 
 ## Setup
 
