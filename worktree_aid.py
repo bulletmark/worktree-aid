@@ -259,7 +259,7 @@ class Trees:
             sys.exit(f'error: failed to format basedir: {e}')
 
         basepath = Path(basedir).expanduser()
-        basepath = cls.toplevel.path / basepath
+        basepath = (cls.toplevel.path / basepath).resolve()
         basepath.mkdir(parents=True, exist_ok=True)
         path = basepath / name
 
@@ -393,8 +393,11 @@ def main() -> int:
             args._stdout = open('/dev/tty', 'w')
         except Exception as e:
             sys.exit(f'error: can not write to terminal in shell function mode: {e}')
+
+        shell_return = 2
     else:
         args._stdout = sys.stdout
+        shell_return = 0
 
     if args.version:
         print_version(args)
@@ -402,9 +405,13 @@ def main() -> int:
         print_help(args)
     elif out := args.func(args):
         print(out)
-        return 0
+        shell_return = 0
 
-    return 2 if args._ else 0
+    # Code checkers like us to explicitly close files we open
+    if args._:
+        args._stdout.close()
+
+    return shell_return
 
 
 # COMMAND
@@ -471,10 +478,8 @@ class rm_:
                 return None
             name = path.name
 
-        if not (path := Trees.remove_worktree(name, args)):
-            return None
-
-        return str(path)
+        path = Trees.remove_worktree(name, args)
+        return str(path) if path else None
 
 
 # COMMAND
