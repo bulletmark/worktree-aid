@@ -425,6 +425,12 @@ class add_:
             help='add detached worktree only, i.e. without adding a new branch',
         )
         parser.add_argument(
+            '-c',
+            '--no-cd',
+            action='store_true',
+            help='do not change directory to new worktree after adding it',
+        )
+        parser.add_argument(
             'worktree',
             default='',
             nargs='?',
@@ -434,7 +440,8 @@ class add_:
     @staticmethod
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
-        return str(Trees.create_worktree(args.worktree, args))
+        path = Trees.create_worktree(args.worktree, args)
+        return str(path) if path and not args.no_cd else None
 
 
 # COMMAND
@@ -463,7 +470,8 @@ class rm_:
             default='',
             nargs='?',
             help='worktree + branch name to remove. If not specified then '
-            'fuzzy finder will prompt with a list of worktrees.',
+            'fuzzy finder will prompt with a list of worktrees, with the '
+            'current worktree as the default selection.',
         )
 
     @staticmethod

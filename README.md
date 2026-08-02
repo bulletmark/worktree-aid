@@ -69,7 +69,7 @@ individual command:
 ### Command `add`
 
 ```
-usage: wt add [-h] [-d] [worktree]
+usage: wt add [-h] [-d] [-c] [worktree]
 
 Add new worktree + branch.
 
@@ -80,6 +80,7 @@ positional arguments:
 options:
   -h, --help    show help message and exit
   -d, --detach  add detached worktree only, i.e. without adding a new branch
+  -c, --no-cd   do not change directory to new worktree after adding it
 
 aliases: a
 ```
@@ -93,7 +94,8 @@ Remove worktree + branch.
 
 positional arguments:
   worktree           worktree + branch name to remove. If not specified then
-                     fuzzy finder will prompt with a list of worktrees.
+                     fuzzy finder will prompt with a list of worktrees, with
+                     the current worktree as the default selection.
 
 options:
   -h, --help         show help message and exit
