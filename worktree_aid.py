@@ -159,6 +159,7 @@ class Trees:
     "Class to manage the collection of worktrees"
 
     trees: list[Tree]
+    names: dict[str, Tree]
     toplevel: Tree
     current: Tree
 
@@ -166,6 +167,7 @@ class Trees:
     def fetch(cls, args: Namespace) -> None:
         "Get worktrees"
         trees = []
+        names = {}
         tree = None
         cwdparts = Path.cwd().parts
         phere = pindex = -1
@@ -194,6 +196,9 @@ class Trees:
                     pindex = len(trees)
 
                 trees.append(tree := Tree(path, path_display))
+
+                if (name := path.name) not in names or name == tree.branch:
+                    names[name] = tree
             elif tree:
                 if field == 'HEAD':
                     tree.head = value[:HASH_LEN]
@@ -211,6 +216,7 @@ class Trees:
 
         cls.current = trees[0]
         cls.trees = trees
+        cls.names = names
 
     @classmethod
     def get_trees(cls) -> list[str]:
@@ -231,19 +237,9 @@ class Trees:
         return lines
 
     @classmethod
-    def get_tree(cls, text: str) -> Tree | None:
-        "Return first tree where branch, then path name, then head matches given text"
-        for tree in cls.trees:
-            if tree.branch == text:
-                return tree
-
-        for tree in cls.trees:
-            if tree.path.name == text:
-                return tree
-
-        for tree in cls.trees:
-            if tree.head == text:
-                return tree
+    def get_tree(cls, name: str) -> Tree | None:
+        "Return worktree with given name, or None if not found"
+        return cls.current if cls.current.path.name == name else cls.names.get(name)
 
     @classmethod
     def create_worktree(cls, name: str, args: Namespace) -> Path:
@@ -494,7 +490,7 @@ class cd_:
             'worktree',
             default='',
             nargs='?',
-            help='Worktree name to change directory to. "/" is a shortcut to base repository/worktree. '
+            help='Worktree name to change directory to. "/" is a shortcut to the toplevel repository. '
             'If not specified then fuzzy finder will prompt with a list of worktrees.',
         )
 
