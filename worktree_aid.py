@@ -12,7 +12,7 @@ import shlex
 import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser, Namespace
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -114,12 +114,12 @@ def unexpanduser(path: Path) -> Path:
     return Path('~', *path.parts[len(HOME.parts) :])
 
 
-def generate_new_name(exists: Callable[[str], Any]) -> str:
+def generate_new_name(exists: set[str]) -> str:
     "Generate a new worktree name"
     from coolname import generate_slug
 
     for _ in range(100):
-        if not exists(name := generate_slug(2)):
+        if (name := generate_slug(2)) not in exists:
             return name
 
     sys.exit('error: failed to generate a new worktree name.')
@@ -245,7 +245,12 @@ class Trees:
     def create_worktree(cls, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
         if not name:
-            name = generate_new_name(cls.get_tree)
+            # If no name is given, generate a new name that does not conflict
+            # with existing worktrees or branches
+            existing = {t.path.name for t in cls.trees}
+            branches = run('git --no-pager branch --list'.split()).splitlines()
+            existing.update(b.split(maxsplit=1)[1] for b in branches)
+            name = generate_new_name(existing)
 
         try:
             basedir = args.basedir.format(
@@ -488,7 +493,7 @@ class rm_:
 
 # COMMAND
 class cd_:
-    "Change directory to specified worktree."
+    "Change worktree directory."
 
     aliases = ('c',)
 
@@ -520,7 +525,7 @@ class cd_:
 
 # COMMAND
 class ls_:
-    "List current worktrees."
+    "List worktrees."
 
     aliases = ('l',)
 

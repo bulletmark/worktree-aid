@@ -58,8 +58,8 @@ Commands:
   {add,a,rm,r,cd,c,ls,l,init}
     add (a)             Add new worktree + branch.
     rm (r)              Remove worktree + branch.
-    cd (c)              Change directory to specified worktree.
-    ls (l)              List current worktrees.
+    cd (c)              Change worktree directory.
+    ls (l)              List worktrees.
     init                Output shell initialization code.
 ```
 
@@ -111,7 +111,7 @@ aliases: r
 ```
 usage: wt cd [-h] [worktree]
 
-Change directory to specified worktree.
+Change worktree directory.
 
 positional arguments:
   worktree    Worktree name to change directory to. "/" is a shortcut to the
@@ -129,7 +129,7 @@ aliases: c
 ```
 usage: wt ls [-h]
 
-List current worktrees.
+List worktrees.
 
 options:
   -h, --help  show help message and exit
@@ -244,7 +244,7 @@ The following place-markers can be used in the definition of the base directory:
 - `{user}`: Substituted with the name of the user.
 - `{home}`: Substituted with the home directory of the user (also can use `~` at start of a path).
 
-Most likely if you will want to set a custom basedir then you will set `-B` as a
+Most likely if you want to set a custom basedir then you will set `-B` as a
 [default option](#default-options).
 
 ## Display as Relative Worktree Directories
