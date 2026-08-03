@@ -344,10 +344,20 @@ def main() -> int:
         help='display worktree paths relative instead of absolute',
     )
     opt.add_argument(
+        '-r',
+        action='store_true',
+        help='toggle -R/--relative option for one-off command only',
+    )
+    opt.add_argument(
         '-U',
         '--no-user',
         action='store_true',
         help='do not substitute "~" for home directory',
+    )
+    opt.add_argument(
+        '-u',
+        action='store_true',
+        help='toggle -U/--no-user option for one-off command only',
     )
     opt.add_argument(
         '-F',
@@ -397,6 +407,13 @@ def main() -> int:
 
     args = opt.parse_args()
     args._opt = opt
+
+    if args.r:
+        args.relative = not args.relative
+
+    if args.u:
+        args.no_user = not args.no_user
+
     if args._:
         try:
             args._stdout = open('/dev/tty', 'w')

@@ -22,7 +22,7 @@ use to manage git worktrees. There are 3 commands typically used:
 - `wt rm` (or `wt r`) to remove a worktree + branch. If you don't specify a
   worktree name, then a [fuzzy finder][fzf] will prompt you with a list of
   worktrees to select from. The current worktree is first in the list and is the
-  default selection to remove. If you delete the current worktree then you will
+  default selection to remove. If you remove the current worktree then you will
   be automatically cd'd to the toplevel repository directory.
 
 There are some other options and commands available, as described in later
@@ -37,7 +37,7 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [-B BASEDIR] [-R] [-U] [-F FUZZY] [-h] [-v]
+usage: wt [-B BASEDIR] [-R] [-r] [-U] [-u] [-F FUZZY] [-h] [-v]
                        {add,a,rm,r,cd,c,ls,l,init} ...
 
 Linux command line tool to conveniently add, remove, and change directories
@@ -49,7 +49,9 @@ options:
                         base directory for newly added worktrees,
                         default="../worktrees/{repo}".
   -R, --relative        display worktree paths relative instead of absolute
+  -r                    toggle -R/--relative option for one-off command only
   -U, --no-user         do not substitute "~" for home directory
+  -u                    toggle -U/--no-user option for one-off command only
   -F, --fuzzy FUZZY     fuzzy finder program, default="fzf"
   -h, --help            show help message and exit
   -v, --version         show program version and exit
@@ -184,9 +186,9 @@ alternatives.
 
 A user who wants to use `worktree-aid` must add the following line to their
 `~/.bashrc` (`bash` user) or `~/.zshrc` (`zsh` user). Ensure it is added
-after where your PATH is set up so that the command `worktree-aid` can be found. This
-creates the `wt` wrapper command in your interactive shell session as a tiny
-function.
+after where your PATH is set up so that the command `worktree-aid` can be
+found. This creates the `wt` wrapper command in your interactive shell session
+as a tiny function.
 
 ```sh
 source <(worktree-aid init)
@@ -219,8 +221,8 @@ initialization code, e.g:
 source <(worktree-aid init "wt -R")
 ```
 
-The above sets `-R` (for relative display of worktree directories) as default for your
-`wt` command.
+The above sets `-R` (for relative display of worktree directories) as default
+for your `wt` command.
 
 The following options are sensible candidates to set as default options:
 `-B/--basedir`, `-R/--relative`, `-U/--no-user`, `-F/--fuzzy`.
@@ -242,10 +244,15 @@ The following place-markers can be used in the definition of the base directory:
 
 - `{repo}`: Substituted with the base name of the repository.
 - `{user}`: Substituted with the name of the user.
-- `{home}`: Substituted with the home directory of the user (also can use `~` at start of a path).
+- `{home}`: Substituted with the home directory of the user (also can use `~`
+   at start of a path).
 
 Most likely if you want to set a custom base directory then you will set `-B`
 as a [default option](#default-options).
+
+Note that the `--B/--basedir` setting is only relevant when adding a new
+worktree using the `add` command. All other commands query your existing
+worktrees so will work regardless of how or where the worktrees were created.
 
 ## Display as Relative Worktree Directories
 
@@ -263,6 +270,8 @@ $ wt l
 ```
 
 Most likely you will want to set `-R` as a [default option](#default-options).
+Note you can use the `-r` option on a one-off command to temporarily toggle
+whatever your default `-R/--relative` option is set as.
 
 ## Fuzzy Finder Integration
 
