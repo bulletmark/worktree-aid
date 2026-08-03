@@ -69,7 +69,7 @@ individual command:
 ### Command `add`
 
 ```
-usage: wt add [-h] [-d] [-c] [worktree]
+usage: wt add [-h] [-d] [-c] [worktree ...]
 
 Add new worktree + branch.
 
@@ -88,7 +88,7 @@ aliases: a
 ### Command `rm`
 
 ```
-usage: wt rm [-h] [-k] [-f] [worktree ...]
+usage: wt rm [-h] [-k] [-f] [-a] [worktree ...]
 
 Remove worktree + branch.
 
@@ -102,6 +102,7 @@ options:
   -k, --keep-branch  remove worktree but keep branch
   -f, --force        force removal of worktree + branch even if untracked or
                      unmerged changes exist.
+  -a, --all          remove all worktrees
 
 aliases: r
 ```

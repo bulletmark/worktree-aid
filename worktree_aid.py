@@ -440,16 +440,19 @@ class add_:
         )
         parser.add_argument(
             'worktree',
-            default='',
-            nargs='?',
+            nargs='*',
             help='new worktree + branch to add. A name is automatically created if not specified.',
         )
 
     @staticmethod
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
-        path = Trees.create_worktree(args.worktree, args)
-        return str(path) if path and not args.no_cd else None
+        retpath = None
+        for name in args.worktree or ['']:
+            if (path := Trees.create_worktree(name, args)) and not retpath:
+                retpath = path
+
+        return str(retpath) if retpath and not args.no_cd else None
 
 
 # COMMAND
@@ -474,6 +477,12 @@ class rm_:
             'untracked or unmerged changes exist.',
         )
         parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='remove all worktrees',
+        )
+        parser.add_argument(
             'worktree',
             nargs='*',
             help='worktree + branch name to remove. If not specified then '
@@ -484,14 +493,23 @@ class rm_:
     @staticmethod
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
+
+        if args.all:
+            if args.worktree:
+                sys.exit('error: cannot specify any worktree name with --all option.')
+
+            names = [t.path.name for t in Trees.trees if t != Trees.toplevel]
+        else:
+            names = args.worktree or ['']
+
         retpath = None
-        for name in args.worktree or ['']:
+        for name in names:
             if not name:
                 if not (path := Trees.prompt(args)):
                     return None
                 name = path.name
 
-            if path := Trees.remove_worktree(name, args):
+            if (path := Trees.remove_worktree(name, args)) and not retpath:
                 retpath = path
 
         return str(retpath) if retpath else None
