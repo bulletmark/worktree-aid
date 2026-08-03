@@ -145,6 +145,15 @@ def print_help(args: Namespace) -> None:
         args._opt.print_help(sys.stderr)
 
 
+def validate_name(name: str) -> None:
+    "Ensure worktree name is valid"
+    if ' ' in name:
+        sys.exit(f'error: worktree name "{name}" can not contain spaces.')
+
+    if '/' in name or '\\' in name:
+        sys.exit(f'error: worktree name "{name}" can not contain "/" or "\\".')
+
+
 @dataclass
 class Tree:
     "Data for an individual worktree"
@@ -245,6 +254,8 @@ class Trees:
             branches = run('git --no-pager branch --list'.split()).splitlines()
             existing.update(b.split(maxsplit=1)[-1] for b in branches)
             name = generate_new_name(existing)
+        else:
+            validate_name(name)
 
         try:
             basedir = args.basedir.format(
