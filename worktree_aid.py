@@ -273,12 +273,15 @@ class Trees:
     @classmethod
     def remove_worktree(cls, name: str, args: Namespace) -> Path | None:
         "Remove the worktree and branch with the given name"
-        if name:
-            if not (tree := cls.get_tree(name)):
-                sys.exit(f'error: no worktree found with name "{name}".')
-        else:
-            # If no name is given, remove the current worktree and branch
-            tree = cls.current
+        if not (tree := cls.get_tree(name)):
+            sys.exit(f'error: no worktree found with name "{name}".')
+
+        if tree == cls.toplevel:
+            print(
+                f'warning: not removing top-level worktree "{tree.path}"',
+                file=sys.stderr,
+            )
+            return None
 
         # Change to the top-level worktree directory before deleting a worktree
         # and/or branch, in case the current directory is removed.
@@ -472,8 +475,7 @@ class rm_:
         )
         parser.add_argument(
             'worktree',
-            default='',
-            nargs='?',
+            nargs='*',
             help='worktree + branch name to remove. If not specified then '
             'fuzzy finder will prompt with a list of worktrees, with the '
             'current worktree as the default selection.',
@@ -482,13 +484,17 @@ class rm_:
     @staticmethod
     def run(args: Namespace) -> str | None:
         Trees.fetch(args)
-        if not (name := args.worktree):
-            if not (path := Trees.prompt(args)):
-                return None
-            name = path.name
+        retpath = None
+        for name in args.worktree or ['']:
+            if not name:
+                if not (path := Trees.prompt(args)):
+                    return None
+                name = path.name
 
-        path = Trees.remove_worktree(name, args)
-        return str(path) if path else None
+            if path := Trees.remove_worktree(name, args):
+                retpath = path
+
+        return str(retpath) if retpath else None
 
 
 # COMMAND
