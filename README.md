@@ -232,12 +232,11 @@ worktrees. It is set to a default as below but you can change this to any
 directory you like. It can be absolute or relative where relative paths are
 relative to base repository directory.
 
-- Default is `-B ../worktrees/{repo}` which is the same as the [Zed] editor
-  uses by default.
+- Default base directory is `-B ../worktrees/{repo}`.
 - E.g. can use `-B ../{repo}.worktrees` which is same as [VS Code] uses by
   default.
-- E.g. can use `-B ~/worktrees/{repo}` to put all worktrees in a subdirectory
-  of your home directory.
+- E.g. can use `-B ~/worktrees/{repo}` to put all worktrees within a
+  subdirectory of your home directory.
 
 The following place-markers can be used in the definition of the base directory:
 
