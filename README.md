@@ -256,10 +256,10 @@ can enable it in `worktree-aid` by adding the `-R/--relative` option, e.g:
 
 ```sh
 $ wt l
-../development 9796714 [development]
-../milestone1  bc921b8 [milestone1]
-../test        e6d965a [test]
-.              f76b8e0 [main]
+../worktrees/worktree-aid/development 9796714 [development]
+../worktrees/worktree-aid/milestone1  bc921b8 [milestone1]
+../worktrees/worktree-aid/test        e6d965a [test]
+                                      f76b8e0 [main]
 ```
 
 Most likely you will want to set `-R` as a [default option](#default-options).
