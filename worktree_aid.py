@@ -118,7 +118,7 @@ def generate_new_name(exists: set[str]) -> str:
     "Generate a new worktree name"
     from coolname import generate_slug
 
-    for _ in range(100):
+    for _ in range(100 + len(exists)):
         if (name := generate_slug(2)) not in exists:
             return name
 
@@ -140,9 +140,9 @@ def print_version(args: Namespace) -> None:
 def print_help(args: Namespace) -> None:
     "Print program help message"
     if 'parser' in args:
-        args.parser.print_help(sys.stderr)
+        args.parser.print_help(args._stdout)
     else:
-        args._opt.print_help(sys.stderr)
+        args._opt.print_help(args._stdout)
 
 
 def validate_name(name: str) -> None:
@@ -150,8 +150,8 @@ def validate_name(name: str) -> None:
     if ' ' in name:
         sys.exit(f'error: worktree name "{name}" can not contain spaces.')
 
-    if '/' in name or '\\' in name:
-        sys.exit(f'error: worktree name "{name}" can not contain "/" or "\\".')
+    if '\\' in name:
+        sys.exit(f'error: worktree name "{name}" can not contain "\\".')
 
 
 @dataclass
@@ -173,7 +173,7 @@ class Trees:
         tree = None
         cwdparts = Path.cwd().parts
         phere = pindex = -1
-        for line in run('git worktree list --porcelain'.split()).splitlines():
+        for line in run(('git', 'worktree', 'list', '--porcelain')).splitlines():
             if not (line := line.strip()):
                 continue
 
@@ -202,7 +202,7 @@ class Trees:
                 if field == 'HEAD':
                     tree.head = value[:HASH_LEN]
                 elif field == 'branch':
-                    tree.branch = value.split('/')[-1]
+                    tree.branch = value.split('/', maxsplit=2)[-1]
 
         if not trees:
             sys.exit('error: no worktrees found.')
@@ -247,13 +247,17 @@ class Trees:
 
     def create_worktree(self, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
+
+        # Get set of existing branch names
+        blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
+        branches = {b.split(maxsplit=1)[-1] for b in blist}
+
         if not name:
             # If no name is given, generate a new name that does not conflict
             # with existing worktrees or branches
-            existing = {t.path.name for t in self.trees}
-            branches = run('git --no-pager branch --list'.split()).splitlines()
-            existing.update(b.split(maxsplit=1)[-1] for b in branches)
-            name = generate_new_name(existing)
+            excludes = {t.path.name for t in self.trees} | branches
+            excludes.update(b.split('/', maxsplit=1)[0] for b in branches if '/' in b)
+            name = generate_new_name(excludes)
         else:
             validate_name(name)
 
@@ -267,12 +271,17 @@ class Trees:
         basepath = Path(basedir).expanduser()
         basepath = (self.toplevel.path / basepath).resolve()
         basepath.mkdir(parents=True, exist_ok=True)
-        path = basepath / name
+        path = basepath / name.replace('/', '-')
 
-        cmd = 'git worktree add'.split()
+        cmd = ['git', 'worktree', 'add', str(path)]
         if args.detach:
             cmd.append('--detach')
-        run(cmd + [str(path)], stdout=args._stdout)
+        else:
+            if name not in branches:
+                cmd.append('-b')
+            cmd.append(name)
+
+        run(cmd, stdout=args._stdout)
         return path
 
     def remove_worktree(
@@ -293,31 +302,37 @@ class Trees:
         # and/or branch, in case the current directory is removed.
         os.chdir(self.toplevel.path)
 
-        cmd = 'git worktree remove'.split()
+        cmd = ['git', 'worktree', 'remove']
         if args.force:
             cmd.append('--force')
 
-        run(cmd + [str(tree.path)], stdout=args._stdout)
+        cmd.append(path_display := str(path := tree.path))
+        run(cmd, stdout=args._stdout)
 
-        path_display = os.path.relpath(tree.path) if args.relative else str(tree.path)
+        if args.relative:
+            path_display = os.path.relpath(path_display)
+
         print(f'Removed worktree "{path_display}"', file=args._stdout)
 
+        # Also remove the toplevel repo worktree directory if it is empty
+        if not any((pdir := path.parent).iterdir()):
+            pdir.rmdir()
+
         if tree.branch and not args.keep_branch:
-            cmd = 'git branch'.split() + ['-D' if args.force else '-d']
-            run(cmd + [tree.branch], stdout=args._stdout, ignore_error=True)
+            cmd = ('git', 'branch', '-D' if args.force else '-d', tree.branch)
+            run(cmd, stdout=args._stdout, ignore_error=True)
 
         return self.toplevel.path if tree == self.current else None
 
     def prompt(self, args: Namespace) -> Tree | None:
         "Prompt user to select a worktree using fuzzy finder"
-        wtrees = self.get_trees()
-        if not wtrees:
+        if not (trees := self.get_trees()):
             sys.exit('error: no worktrees to remove.')
-        line = run(shlex.split(args.fuzzy), stdin='\n'.join(wtrees)).strip()
-        if not line or line not in wtrees:
+        line = run(shlex.split(args.fuzzy), stdin='\n'.join(trees)).strip()
+        if not line or line not in trees:
             return None
 
-        return self.trees[wtrees.index(line)]
+        return self.trees[trees.index(line)]
 
 
 def main() -> int:
