@@ -258,8 +258,9 @@ worktrees so will work regardless of how or where the worktrees were created.
 
 The `git worktree list` command displays absolute directory paths, and
 `worktree-aid` does also by default, but many users prefer them displayed as
-shorter relative paths. The Git worktree command does not provide this but you
-can enable it in `worktree-aid` by adding the `-R/--relative` option, e.g:
+shorter relative paths which `git worktree` does not provide. You
+can enable it in `worktree-aid` however, by adding the `-R/--relative` option,
+e.g:
 
 ```sh
 $ wt l
