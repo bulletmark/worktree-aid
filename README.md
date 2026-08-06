@@ -8,7 +8,7 @@ current worktrees and prompt user for the name if not given.
 
 After following the instructions in the [Installation](#installation-or-upgrade)
 and [Setup](#setup) sections below, an `wt` shell command/alias is available to
-use to manage git worktrees. There are 3 commands typically used:
+use to manage git worktrees. There are 3 commonly used commands:
 
 - `wt add` (or `wt a`) to add a new worktree + branch and automatically cd to
   it. If you don't specify a worktree name, a new unique name will be
@@ -25,8 +25,8 @@ use to manage git worktrees. There are 3 commands typically used:
   default selection to remove. If you remove the current worktree then you will
   be automatically cd'd to the toplevel repository directory.
 
-There are some other options and commands available, as described in later
-sections. Type `wt` to see an overall help/usage summary, or `wt <command> -h`
+There are some other options and commands available, as described in the next
+section. Type `wt` to see an overall help/usage summary, or `wt <command> -h`
 to see specific help/usage for any individual command.
 
 The project homepage and latest documentation is at
@@ -38,7 +38,7 @@ Type `wt` or `wt -h` to view the usage summary:
 
 ```
 usage: wt [-B BASEDIR] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
-                       {add,a,rm,r,cd,c,ls,l,init} ...
+                       {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
 
 Linux command line tool to conveniently add, remove, and change directories
 for git worktrees. Prompts user to select worktree using fuzzy finder if no
@@ -57,10 +57,11 @@ options:
   -h, --help            show help message and exit
 
 Commands:
-  {add,a,rm,r,cd,c,ls,l,init}
+  {add,a,rm,r,cd,c,fetch,f,ls,l,init}
     add (a)             Add new worktree + branch.
     rm (r)              Remove worktree + branch.
     cd (c)              Change worktree directory.
+    fetch (f)           Fetch changes from another worktree.
     ls (l)              List worktrees.
     init                Output shell initialization code.
 ```
@@ -125,6 +126,26 @@ options:
   -h, --help  show help message and exit
 
 aliases: c
+```
+
+### Command `fetch`
+
+```
+usage: wt fetch [-h] [-c COMMIT] [-q] [worktree]
+
+Fetch changes from another worktree.
+
+positional arguments:
+  worktree             Worktree name to copy from. "/" is a shortcut to the
+                       toplevel repository. If not specified then fuzzy finder
+                       will prompt with a list of worktrees.
+
+options:
+  -h, --help           show help message and exit
+  -c, --commit COMMIT  fetch changes relative to given commit, default="HEAD"
+  -q, --quiet          suppress output of copied files
+
+aliases: f
 ```
 
 ### Command `ls`

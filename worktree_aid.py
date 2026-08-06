@@ -9,6 +9,7 @@ from __future__ import annotations
 import getpass
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser, Namespace
@@ -154,6 +155,28 @@ def validate_name(name: str) -> None:
         sys.exit(f'error: worktree name "{name}" can not contain "\\".')
 
 
+def copyfiles(src: Path, dst: Path, stdout: Any, commit: str, relative: bool) -> None:
+    "Copy git changes from src worktree to dst worktree"
+    cmd = ('git', '-C', str(src), 'diff', commit, '--name-only')
+    for file in run(cmd).splitlines():
+        srcfile = src / file
+        dstfile = dst / file
+        sfile = os.path.relpath(srcfile) if relative else str(srcfile)
+        dfile = os.path.relpath(dstfile) if relative else str(dstfile)
+
+        if srcfile.exists():
+            if stdout:
+                print(f'Copying {sfile} to {dfile}', file=stdout)
+
+            dstfile.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(srcfile, dstfile, follow_symlinks=False)
+        elif dstfile.exists():
+            if stdout:
+                print(f'Removing {dfile}', file=stdout)
+
+            dstfile.unlink()
+
+
 @dataclass
 class Tree:
     "Data for an individual worktree"
@@ -215,6 +238,7 @@ class Trees:
 
         self.trees = trees
         self.current = trees[0]
+        self.args = args
 
     def get_trees(self) -> list[str]:
         "Fetch string list of worktrees"
@@ -245,7 +269,31 @@ class Trees:
 
         return path_match
 
-    def create_worktree(self, name: str, args: Namespace) -> Path:
+    def prompt(self) -> Tree | None:
+        "Prompt user to select a worktree using fuzzy finder"
+        if not (trees := self.get_trees()):
+            sys.exit('error: no worktrees to remove.')
+        line = run(shlex.split(self.args.fuzzy), stdin='\n'.join(trees)).strip()
+        if not line or line not in trees:
+            return None
+
+        return self.trees[trees.index(line)]
+
+    def get_or_ask_tree(self, name: str) -> Tree | None:
+        "Return worktree with given name, or ask user for name"
+        if name:
+            if name == '/':
+                # Shortcut to top-level worktree
+                tree = self.toplevel
+            elif not (tree := self.get_tree(name)):
+                sys.exit(f'error: no worktree found with name "{name}".')
+        else:
+            # If no worktree name is given, prompt user to select one
+            tree = self.prompt()
+
+        return tree
+
+    def create_worktree(self, name: str) -> Path:
         "Create a new worktree and branch with the given name"
 
         # Get set of existing branch names
@@ -262,7 +310,7 @@ class Trees:
             validate_name(name)
 
         try:
-            basedir = args.basedir.format(
+            basedir = self.args.basedir.format(
                 user=getpass.getuser(), repo=self.toplevel.path.name, home=str(HOME)
             )
         except Exception as e:
@@ -274,19 +322,17 @@ class Trees:
         path = basepath / name.replace('/', '-')
 
         cmd = ['git', 'worktree', 'add', str(path)]
-        if args.detach:
+        if self.args.detach:
             cmd.append('--detach')
         else:
             if name not in branches:
                 cmd.append('-b')
             cmd.append(name)
 
-        run(cmd, stdout=args._stdout)
+        run(cmd, stdout=self.args._stdout)
         return path
 
-    def remove_worktree(
-        self, name: str, args: Namespace, tree: Tree | None = None
-    ) -> Path | None:
+    def remove_worktree(self, name: str, tree: Tree | None = None) -> Path | None:
         "Remove the worktree and branch with the given name"
         if not tree and not (tree := self.get_tree(name)):
             sys.exit(f'error: no worktree found with name "{name}".')
@@ -303,36 +349,26 @@ class Trees:
         os.chdir(self.toplevel.path)
 
         cmd = ['git', 'worktree', 'remove']
-        if args.force:
+        if self.args.force:
             cmd.append('--force')
 
         cmd.append(path_display := str(path := tree.path))
-        run(cmd, stdout=args._stdout)
+        run(cmd, stdout=self.args._stdout)
 
-        if args.relative:
+        if self.args.relative:
             path_display = os.path.relpath(path_display)
 
-        print(f'Removed worktree "{path_display}"', file=args._stdout)
+        print(f'Removed worktree "{path_display}"', file=self.args._stdout)
 
         # Also remove the toplevel repo worktree directory if it is empty
         if not any((pdir := path.parent).iterdir()):
             pdir.rmdir()
 
-        if tree.branch and not args.keep_branch:
-            cmd = ('git', 'branch', '-D' if args.force else '-d', tree.branch)
-            run(cmd, stdout=args._stdout, ignore_error=True)
+        if tree.branch and not self.args.keep_branch:
+            cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
+            run(cmd, stdout=self.args._stdout, ignore_error=True)
 
         return self.toplevel.path if tree == self.current else None
-
-    def prompt(self, args: Namespace) -> Tree | None:
-        "Prompt user to select a worktree using fuzzy finder"
-        if not (trees := self.get_trees()):
-            sys.exit('error: no worktrees to remove.')
-        line = run(shlex.split(args.fuzzy), stdin='\n'.join(trees)).strip()
-        if not line or line not in trees:
-            return None
-
-        return self.trees[trees.index(line)]
 
 
 def main() -> int:
@@ -486,7 +522,7 @@ class add_:
         trees = Trees(args)
         retpath = None
         for name in args.worktree or ['']:
-            if (path := trees.create_worktree(name, args)) and not retpath:
+            if (path := trees.create_worktree(name)) and not retpath:
                 retpath = path
 
         return str(retpath) if retpath and not args.no_cd else None
@@ -543,10 +579,10 @@ class rm_:
         tree = None
         for name in names:
             # If no worktree name is given, prompt user to select one
-            if not name and not (tree := trees.prompt(args)):
+            if not name and not (tree := trees.prompt()):
                 return None
 
-            if (path := trees.remove_worktree(name, args, tree)) and not retpath:
+            if (path := trees.remove_worktree(name, tree)) and not retpath:
                 retpath = path
 
             tree = None
@@ -573,17 +609,47 @@ class cd_:
     @staticmethod
     def run(args: Namespace) -> str | None:
         trees = Trees(args)
-        if name := args.worktree:
-            if name == '/':
-                # Shortcut to top-level worktree
-                tree = trees.toplevel
-            elif not (tree := trees.get_tree(name)):
-                sys.exit(f'error: no worktree found with name "{name}".')
-        else:
-            # If no worktree name is given, prompt user to select one
-            tree = trees.prompt(args)
-
+        tree = trees.get_or_ask_tree(args.worktree)
         return str(tree.path) if tree else None
+
+
+# COMMAND
+class fetch_:
+    "Fetch changes from another worktree."
+
+    aliases = ('f',)
+
+    @staticmethod
+    def init(parser: ArgumentParser) -> None:
+        parser.add_argument(
+            '-c',
+            '--commit',
+            default='HEAD',
+            help='fetch changes relative to given commit, default="%(default)s"',
+        )
+        parser.add_argument(
+            '-q',
+            '--quiet',
+            action='store_true',
+            help='suppress output of copied files',
+        )
+        parser.add_argument(
+            'worktree',
+            default='',
+            nargs='?',
+            help='Worktree name to copy from. "/" is a shortcut to the toplevel repository. '
+            'If not specified then fuzzy finder will prompt with a list of worktrees.',
+        )
+
+    @staticmethod
+    def run(args: Namespace) -> str | None:
+        trees = Trees(args)
+        tree = trees.get_or_ask_tree(args.worktree)
+        if tree and (srcpath := tree.path) != (dstpath := trees.current.path):
+            stdout = None if args.quiet else args._stdout
+            copyfiles(srcpath, dstpath, stdout, args.commit, args.relative)
+
+        return None
 
 
 # COMMAND
