@@ -359,7 +359,7 @@ def main() -> int:
     opt.add_argument(
         '-r',
         action='store_true',
-        help='toggle -R/--relative option for one-off command only',
+        help='toggle --relative option for one-off command only',
     )
     opt.add_argument(
         '--no-user',
@@ -369,7 +369,7 @@ def main() -> int:
     opt.add_argument(
         '-u',
         action='store_true',
-        help='toggle -U/--no-user option for one-off command only',
+        help='toggle --no-user option for one-off command only',
     )
     opt.add_argument(
         '--fuzzy',
