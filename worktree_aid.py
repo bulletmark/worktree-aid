@@ -347,13 +347,11 @@ def main() -> int:
     # Parse arguments
     opt = ArgumentParser(description=__doc__, add_help=False)
     opt.add_argument(
-        '-B',
         '--basedir',
         default=BASEDIR,
         help='base directory for newly added worktrees, default="%(default)s".',
     )
     opt.add_argument(
-        '-R',
         '--relative',
         action='store_true',
         help='display worktree paths relative instead of absolute',
@@ -364,10 +362,9 @@ def main() -> int:
         help='toggle -R/--relative option for one-off command only',
     )
     opt.add_argument(
-        '-U',
         '--no-user',
         action='store_true',
-        help='do not substitute "~" for home directory',
+        help='do not substitute "~" for user home directory',
     )
     opt.add_argument(
         '-u',
@@ -375,16 +372,15 @@ def main() -> int:
         help='toggle -U/--no-user option for one-off command only',
     )
     opt.add_argument(
-        '-F',
         '--fuzzy',
         default=DEFAULT_FUZZY,
         help='fuzzy finder program, default="%(default)s"',
     )
     opt.add_argument(
-        '-h', '--help', action='store_true', help='show help message and exit'
+        '--version', action='store_true', help='show program version and exit'
     )
     opt.add_argument(
-        '-v', '--version', action='store_true', help='show program version and exit'
+        '-h', '--help', action='store_true', help='show help message and exit'
     )
     opt.add_argument('-_', action='store_true', help=SUPPRESS)
     cmd = opt.add_subparsers(title='Commands')

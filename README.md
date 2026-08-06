@@ -37,7 +37,8 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [-B BASEDIR] [-R] [-r] [-U] [-u] [-F FUZZY] [-h] [-v]
+usage: wt [--basedir BASEDIR] [--relative] [-r] [--no-user] [-u]
+                       [--fuzzy FUZZY] [--version] [-h]
                        {add,a,rm,r,cd,c,ls,l,init} ...
 
 Linux command line tool to conveniently add, remove, and change directories
@@ -45,16 +46,15 @@ for git worktrees. Prompts user to select worktree using fuzzy finder if no
 worktree name is given.
 
 options:
-  -B, --basedir BASEDIR
-                        base directory for newly added worktrees,
+  --basedir BASEDIR     base directory for newly added worktrees,
                         default="../worktrees/{repo}".
-  -R, --relative        display worktree paths relative instead of absolute
+  --relative            display worktree paths relative instead of absolute
   -r                    toggle -R/--relative option for one-off command only
-  -U, --no-user         do not substitute "~" for home directory
+  --no-user             do not substitute "~" for user home directory
   -u                    toggle -U/--no-user option for one-off command only
-  -F, --fuzzy FUZZY     fuzzy finder program, default="fzf"
+  --fuzzy FUZZY         fuzzy finder program, default="fzf"
+  --version             show program version and exit
   -h, --help            show help message and exit
-  -v, --version         show program version and exit
 
 Commands:
   {add,a,rm,r,cd,c,ls,l,init}
