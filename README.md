@@ -37,8 +37,7 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [--basedir BASEDIR] [--relative] [-r] [--no-user] [-u]
-                       [--fuzzy FUZZY] [--version] [-h]
+usage: wt [-B BASEDIR] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
                        {add,a,rm,r,cd,c,ls,l,init} ...
 
 Linux command line tool to conveniently add, remove, and change directories
@@ -46,14 +45,15 @@ for git worktrees. Prompts user to select worktree using fuzzy finder if no
 worktree name is given.
 
 options:
-  --basedir BASEDIR     base directory for newly added worktrees,
+  -B, --basedir BASEDIR
+                        base directory for newly added worktrees,
                         default="../worktrees/{repo}".
-  --relative            display worktree paths relative instead of absolute
-  -r                    toggle --relative option for one-off command only
-  --no-user             do not substitute "~" for user home directory
-  -u                    toggle --no-user option for one-off command only
-  --fuzzy FUZZY         fuzzy finder program, default="fzf"
-  --version             show program version and exit
+  -R, --relative        display worktree paths relative instead of absolute
+  -r                    toggle -R/--relative option for one-off command only
+  -U, --no-user         do not substitute "~" for user home directory
+  -u                    toggle -U/--no-user option for one-off command only
+  -F, --fuzzy FUZZY     fuzzy finder program, default="fzf"
+  -V, --version         show program version and exit
   -h, --help            show help message and exit
 
 Commands:
@@ -218,26 +218,26 @@ You can also set default `worktree-aid` options by appending options in the shel
 initialization code, e.g:
 
 ```sh
-source <(worktree-aid init "wt --relative")
+source <(worktree-aid init "wt -R")
 ```
 
-The above sets `--relative` (for relative display of worktree directories) as default
+The above sets `-R` (for relative display of worktree directories) as default
 for your `wt` command.
 
 The following options are sensible candidates to set as default options:
-`--basedir`, `--relative`, `--no-user`, `--fuzzy`.
+`-B/--basedir`, `-R/--relative`, `-U/--no-user`, `-F/--fuzzy`.
 
 ## Worktree Base Directory
 
-The `--basedir` option allows you to specify a base directory for newly added
+The `-B/--basedir` option allows you to specify a base directory for newly added
 worktrees. It is set to a default as below but you can change this to any
 directory you like. It can be absolute or relative where relative paths are
 relative to base repository directory.
 
-- Default base directory is `--basedir ../worktrees/{repo}`.
-- E.g. can use `--basedir ../{repo}.worktrees` which is same as [VS Code] uses by
+- Default base directory is `-B ../worktrees/{repo}`.
+- E.g. can use `-B ../{repo}.worktrees` which is same as [VS Code] uses by
   default.
-- E.g. can use `--basedir ~/worktrees/{repo}` to put all worktrees within a
+- E.g. can use `-B ~/worktrees/{repo}` to put all worktrees within a
   subdirectory of your home directory.
 
 The following place-markers can be used in the definition of the base directory:
@@ -247,10 +247,10 @@ The following place-markers can be used in the definition of the base directory:
 - `{home}`: Substituted with the home directory of the user (also can use `~`
    at start of a path).
 
-Most likely if you want to set a custom base directory then you will set `--basedir`
+Most likely if you want to set a custom base directory then you will set `-B`
 as a [default option](#default-options).
 
-Note that the `--basedir` setting is only relevant when adding a new
+Note that the `--B/--basedir` setting is only relevant when adding a new
 worktree using the `add` command. All other commands query your existing
 worktrees so will work regardless of how or where the worktrees were created.
 
@@ -259,7 +259,7 @@ worktrees so will work regardless of how or where the worktrees were created.
 The `git worktree list` command displays absolute directory paths, and
 `worktree-aid` does also by default, but many users prefer them displayed as
 shorter relative paths which `git worktree` does not provide. You
-can enable it in `worktree-aid` however, by adding the `--relative` option,
+can enable it in `worktree-aid` however, by adding the `-R/--relative` option,
 e.g:
 
 ```sh
@@ -270,9 +270,9 @@ $ wt l
                                       f76b8e0 [main]
 ```
 
-Most likely you will want to set `--relative` as a [default option](#default-options).
+Most likely you will want to set `-R` as a [default option](#default-options).
 Note you can use the `-r` option on a one-off command to temporarily toggle
-whatever your default `--relative` option is set as.
+whatever your default `-R/--relative` option is set as.
 
 ## Fuzzy Finder Integration
 
@@ -283,11 +283,11 @@ any of the popular other command line fuzzy search finders such as [`sk`][skim],
 E.g. to use [`sk`][skim], put this in your `~/.bashrc` or `~/.zshrc` file:
 
 ```sh
-source <(worktree-aid init "wt --fuzzy sk")
+source <(worktree-aid init "wt -F sk")
 ```
 
 You can also get fancy and add preview options etc to your fuzzy finder command line.
-Most likely you will want to set `--fuzzy` as a [default option](#default-options).
+Most likely you will want to set `-F` as a [default option](#default-options).
 
 ## License
 
