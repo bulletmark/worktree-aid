@@ -14,6 +14,7 @@ import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser, Namespace
 from collections.abc import Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -154,6 +155,9 @@ def validate_name(name: str) -> None:
     if '\\' in name:
         sys.exit(f'error: worktree name "{name}" can not contain "\\".')
 
+    if name.startswith(('-', '.')):
+        sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
+
 
 def copyfiles(src: Path, dst: Path, stdout: Any, commit: str, relative: bool) -> None:
     "Copy git changes from src worktree to dst worktree"
@@ -164,17 +168,23 @@ def copyfiles(src: Path, dst: Path, stdout: Any, commit: str, relative: bool) ->
         sfile = os.path.relpath(srcfile) if relative else str(srcfile)
         dfile = os.path.relpath(dstfile) if relative else str(dstfile)
 
-        if srcfile.exists():
+        if os.path.lexists(srcfile):
             if stdout:
                 print(f'Copying {sfile} to {dfile}', file=stdout)
 
+            if dstfile.is_dir() and not dstfile.is_symlink():
+                shutil.rmtree(dstfile)
+
             dstfile.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-        elif dstfile.exists():
+        elif os.path.lexists(dstfile):
             if stdout:
                 print(f'Removing {dfile}', file=stdout)
 
-            dstfile.unlink()
+            if dstfile.is_dir() and not dstfile.is_symlink():
+                shutil.rmtree(dstfile)
+            else:
+                dstfile.unlink()
 
 
 @dataclass
@@ -194,7 +204,7 @@ class Trees:
         "Get worktrees"
         trees = []
         tree = None
-        cwdparts = Path.cwd().parts
+        cwdparts = Path.cwd().resolve().parts
         phere = pindex = -1
         for line in run(('git', 'worktree', 'list', '--porcelain')).splitlines():
             if not (line := line.strip()):
@@ -259,15 +269,23 @@ class Trees:
 
     def get_tree(self, name: str) -> Tree | None:
         "Return worktree with given name, or None if not found"
-        path_match = None
-        for tree in self.trees:
-            if tree.branch == name:
-                return tree
+        if name == '/':
+            # Shortcut to top-level worktree
+            tree = self.toplevel
+        elif name == '.':
+            # Shortcut to current worktree
+            tree = self.current
+        else:
+            tree = None
+            for t in self.trees:
+                if t.branch == name:
+                    tree = t
+                    break
 
-            if tree.path.name == name:
-                path_match = tree
+                if t.path.name == name:
+                    tree = t
 
-        return path_match
+        return tree
 
     def prompt(self) -> Tree | None:
         "Prompt user to select a worktree using fuzzy finder"
@@ -282,10 +300,7 @@ class Trees:
     def get_or_ask_tree(self, name: str) -> Tree | None:
         "Return worktree with given name, or ask user for name"
         if name:
-            if name == '/':
-                # Shortcut to top-level worktree
-                tree = self.toplevel
-            elif not (tree := self.get_tree(name)):
+            if not (tree := self.get_tree(name)):
                 sys.exit(f'error: no worktree found with name "{name}".')
         else:
             # If no worktree name is given, prompt user to select one
@@ -361,8 +376,10 @@ class Trees:
         print(f'Removed worktree "{path_display}"', file=self.args._stdout)
 
         # Also remove the toplevel repo worktree directory if it is empty
-        if not any((pdir := path.parent).iterdir()):
-            pdir.rmdir()
+        pdir = path.parent
+        with suppress(Exception):
+            if not any(pdir.iterdir()):
+                pdir.rmdir()
 
         if tree.branch and not self.args.keep_branch:
             cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
@@ -465,6 +482,8 @@ def main() -> int:
     if args.u:
         args.no_user = not args.no_user
 
+    # Note that '_' is a hidden option and only set when this program is
+    # invoked from the shell function
     if args._:
         try:
             args._stdout = open('/dev/tty', 'w')
@@ -558,8 +577,8 @@ class rm_:
         parser.add_argument(
             'worktree',
             nargs='*',
-            help='worktree + branch name to remove. If not specified then '
-            'fuzzy finder will prompt with a list of worktrees, with the '
+            help='worktree + branch name to remove. "." is a shortcut to the current worktree. '
+            'If not specified then fuzzy finder will prompt with a list of worktrees, with the '
             'current worktree as the default selection.',
         )
 
@@ -644,10 +663,12 @@ class fetch_:
     @staticmethod
     def run(args: Namespace) -> str | None:
         trees = Trees(args)
-        tree = trees.get_or_ask_tree(args.worktree)
-        if tree and (srcpath := tree.path) != (dstpath := trees.current.path):
-            stdout = None if args.quiet else args._stdout
-            copyfiles(srcpath, dstpath, stdout, args.commit, args.relative)
+        if tree := trees.get_or_ask_tree(args.worktree):
+            srcpath = tree.path
+            dstpath = trees.current.path
+            if not srcpath.samefile(dstpath):
+                stdout = None if args.quiet else args._stdout
+                copyfiles(srcpath, dstpath, stdout, args.commit, args.relative)
 
         return None
 

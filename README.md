@@ -96,9 +96,10 @@ usage: wt rm [-h] [-k] [-f] [-a] [worktree ...]
 Remove worktree + branch.
 
 positional arguments:
-  worktree           worktree + branch name to remove. If not specified then
-                     fuzzy finder will prompt with a list of worktrees, with
-                     the current worktree as the default selection.
+  worktree           worktree + branch name to remove. "." is a shortcut to
+                     the current worktree. If not specified then fuzzy finder
+                     will prompt with a list of worktrees, with the current
+                     worktree as the default selection.
 
 options:
   -h, --help         show help message and exit
@@ -198,10 +199,10 @@ Or, on Arch Linux:
 $ yay -S worktree-aid  # or your preferred AUR helper
 ```
 
-You also need to install a fuzzy finder program such as [`fzf`][fzf] which is
-the default used by `worktree-aid`. See [fuzzy finder
-installation](#fuzzy-finder-integration) instructions for possible
-alternatives.
+[Git] is required to execute all commands. You also need to install a fuzzy
+finder program such as [`fzf`][fzf] which is the default used by
+`worktree-aid`. See [fuzzy finder installation](#fuzzy-finder-integration)
+instructions for possible alternatives.
 
 ## Setup
 
@@ -325,3 +326,4 @@ GPL-3.0-or-later.
 [television]: https://github.com/alexpasmantier/television
 [Zed]: https://zed.dev/
 [VS Code]: https://code.visualstudio.com/
+[Git]: https://git-scm.com/
