@@ -4,7 +4,7 @@
 
 This is a Linux command line tool to conveniently add, remove, and change
 directories for [git worktrees][gitw]. A [fuzzy finder][fzf] is used to show
-current worktrees and prompt user for the name if not given.
+current worktrees and prompt for the name if not given.
 
 After following the instructions in the [Installation](#installation-or-upgrade)
 and [Setup](#setup) sections below, an `wt` shell command/alias is available to
