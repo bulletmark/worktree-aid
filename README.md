@@ -37,7 +37,7 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [-B BASEDIR] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
+usage: wt [-P PATH] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
                        {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
 
 Linux command line tool to conveniently add, remove, and change directories
@@ -45,9 +45,9 @@ for git worktrees. Prompts user to select worktree using fuzzy finder if no
 worktree name is given.
 
 options:
-  -B, --basedir BASEDIR
-                        base directory for newly added worktrees,
-                        default="../worktrees/{repo}".
+  -P, --path PATH       directory path template for newly added worktrees,
+                        default="../worktrees/{repo}/{worktree}". Can use
+                        {repo}, {worktree}, {user}, and {home} placeholders.
   -R, --relative        display worktree paths relative instead of absolute
   -r                    toggle -R/--relative option for one-off command only
   -U, --no-user         do not substitute "~" for user home directory
@@ -247,32 +247,39 @@ The above sets `-R` (for relative display of worktree directories) as default
 for your `wt` command.
 
 The following options are sensible candidates to set as default options:
-`-B/--basedir`, `-R/--relative`, `-U/--no-user`, `-F/--fuzzy`.
+`-P/--path`, `-R/--relative`, `-U/--no-user`, `-F/--fuzzy`.
 
-## Worktree Base Directory
+## Directory Path Template for new Worktree Creation
 
-The `-B/--basedir` option allows you to specify a base directory for newly added
-worktrees. It is set to a default as below but you can change this to any
-directory you like. It can be absolute or relative where relative paths are
-relative to base repository directory.
+The `-P/--path` option allows you to specify the directory path template for
+newly added worktrees. It is set to a default as below but you can change this
+to any directory you like. It can be absolute or relative where relative paths
+are relative to base toplevel repository directory.
 
-- Default base directory is `-B ../worktrees/{repo}`.
-- E.g. can use `-B ../{repo}.worktrees` which is same as [VS Code] uses by
-  default.
-- E.g. can use `-B ~/worktrees/{repo}` to put all worktrees within a
-  subdirectory of your home directory.
+- Default base directory is `-P ../worktrees/{repo}/{worktree}`.
+- E.g. can use `-P ../worktrees/{repo}/{worktree}/{repo}` which is same as [Zed]
+  editor creates by default.
+- E.g. can use `-P ../{repo}.worktrees/{worktree}` which is same as [VS Code]
+  editor creates by default.
+- E.g. can use `-P ~/worktrees/{repo}/{worktree}` to create all worktrees within
+  a subdirectory of your home directory.
 
-The following place-markers can be used in the definition of the base directory:
+The following placeholders can be used in the definition of the directory
+template:
 
 - `{repo}`: Substituted with the base name of the repository.
+- `{worktree}`: Substituted with the name of the worktree/branch.
 - `{user}`: Substituted with the name of the user.
 - `{home}`: Substituted with the home directory of the user (also can use `~`
    at start of a path).
 
-Most likely if you want to set a custom base directory then you will set `-B`
+It is compulsory to have at least `{repo}` and `{worktree}` placeholders
+somewhere in your path definition.
+
+Most likely if you want to set a custom path then you will set `-P`
 as a [default option](#default-options).
 
-Note that the `--B/--basedir` setting is only relevant when adding a new
+Note that the `--P/--path` setting is only relevant when adding a new
 worktree using the `add` command. All other commands query your existing
 worktrees so will work regardless of how or where the worktrees were created.
 

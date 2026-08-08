@@ -14,7 +14,6 @@ import subprocess
 import sys
 from argparse import SUPPRESS, ArgumentParser, Namespace
 from collections.abc import Sequence
-from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -30,11 +29,14 @@ DEFCMD = 'wt'
 # Default fuzzy finder. Can be changed using command line option.
 DEFAULT_FUZZY = 'fzf'
 
-# Relative path from top level repo dir to directory for newly created
-# worktrees. Can be changed using command line option. Can use {user}, {repo},
-# and {home} as placeholders for the current user name, repo name, and home
-# directory.
-BASEDIR = '../worktrees/{repo}'
+# Relative path template from top level repo dir to directory for newly created
+# worktrees. Can be changed using command line option. Can use the following
+# placeholders:
+# {repo} = top-level repo name (compulsory somewhere)
+# {worktree} = worktree name (compulsory somwhere)
+# {user} = current user name
+# {home} = current user home directory
+PATH = '../worktrees/{repo}/{worktree}'
 
 # Template for the shell code injected into user's shell session
 SHELLCODE = """
@@ -187,6 +189,22 @@ def copyfiles(src: Path, dst: Path, stdout: Any, commit: str, relative: bool) ->
                 dstfile.unlink()
 
 
+def rm_parents(path: Path) -> None:
+    "Remove empty parent directories of worktree path"
+    for p in path.parents:
+        if not p.is_dir() or p.samefile(HOME):
+            break
+
+        # Stop removing parent directories if any files exist in this directory
+        if any(p.iterdir()):
+            break
+
+        try:
+            p.rmdir()
+        except Exception:
+            break
+
+
 @dataclass
 class Tree:
     "Data for an individual worktree"
@@ -324,17 +342,26 @@ class Trees:
         else:
             validate_name(name)
 
+        pathstr = self.args.path
+        if '{repo}' not in pathstr or '{worktree}' not in pathstr:
+            sys.exit(
+                'error: -P/--path must contain "{repo}" and "{worktree}" placeholders.'
+            )
+
+        worktree = name.replace('/', '-')
+
         try:
-            basedir = self.args.basedir.format(
-                user=getpass.getuser(), repo=self.toplevel.path.name, home=str(HOME)
+            pathstr = pathstr.format(
+                repo=self.toplevel.path.name,
+                worktree=worktree,
+                user=getpass.getuser(),
+                home=str(HOME),
             )
         except Exception as e:
-            sys.exit(f'error: failed to format basedir: {e}')
+            sys.exit(f'error: failed to format -P/--path: {e}')
 
-        basepath = Path(basedir).expanduser()
-        basepath = (self.toplevel.path / basepath).resolve()
-        basepath.mkdir(parents=True, exist_ok=True)
-        path = basepath / name.replace('/', '-')
+        path = Path(pathstr).expanduser()
+        path = (self.toplevel.path / path).resolve()
 
         cmd = ['git', 'worktree', 'add', str(path)]
         if self.args.detach:
@@ -375,11 +402,8 @@ class Trees:
 
         print(f'Removed worktree "{path_display}"', file=self.args._stdout)
 
-        # Also remove the toplevel repo worktree directory if it is empty
-        pdir = path.parent
-        with suppress(Exception):
-            if not any(pdir.iterdir()):
-                pdir.rmdir()
+        # Also remove parent directories of the worktree if they are empty
+        rm_parents(path)
 
         if tree.branch and not self.args.keep_branch:
             cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
@@ -400,10 +424,11 @@ def main() -> int:
     # Parse arguments
     opt = ArgumentParser(description=__doc__, add_help=False)
     opt.add_argument(
-        '-B',
-        '--basedir',
-        default=BASEDIR,
-        help='base directory for newly added worktrees, default="%(default)s".',
+        '-P',
+        '--path',
+        default=PATH,
+        help='directory path template for newly added worktrees, default="%(default)s". '
+        'Can use {repo}, {worktree}, {user}, and {home} placeholders.',
     )
     opt.add_argument(
         '-R',
