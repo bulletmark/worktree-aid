@@ -47,7 +47,7 @@ worktree name is given.
 options:
   -P, --path PATH       directory path template for newly added worktrees,
                         default="../worktrees/{repo}/{worktree}". Can use
-                        {repo}, {worktree}, {user}, and {home} placeholders.
+                        {worktree}, {repo}, {user}, and {home} placeholders.
   -R, --relative        display worktree paths relative instead of absolute
   -r                    toggle -R/--relative option for one-off command only
   -U, --no-user         do not substitute "~" for user home directory
@@ -266,14 +266,14 @@ are relative to base toplevel repository directory.
 The following placeholders can be used in the definition of the directory
 template:
 
-- `{repo}`: Substituted with the base name of the repository.
 - `{worktree}`: Substituted with the name of the worktree/branch.
+- `{repo}`: Substituted with the base name of the repository.
 - `{user}`: Substituted with the name of the user.
 - `{home}`: Substituted with the home directory of the user (also can use `~`
    at start of a path).
 
-It is compulsory to have at least `{repo}` and `{worktree}` placeholders
-somewhere in your path definition.
+It is compulsory to have at least the `{worktree}` placeholder somewhere in
+your path definition.
 
 Most likely if you want to set a custom path then you will set `-P`
 as a [default option](#default-options).

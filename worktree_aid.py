@@ -32,8 +32,8 @@ DEFAULT_FUZZY = 'fzf'
 # Relative path template from top level repo dir to directory for newly created
 # worktrees. Can be changed using command line option. Can use the following
 # placeholders:
-# {repo} = top-level repo name (compulsory somewhere)
 # {worktree} = worktree name (compulsory somwhere)
+# {repo} = top-level repo name
 # {user} = current user name
 # {home} = current user home directory
 PATH = '../worktrees/{repo}/{worktree}'
@@ -166,7 +166,7 @@ def copyfiles(src: Path, dst: Path, stdout: Any, relative: bool) -> None:
     cmd = ('git', '-C', str(src), 'status', '--porcelain', '-z')
     for line in run(cmd).split('\0'):
         if not (line := line.strip()):
-                continue
+            continue
 
         _status, file = line.strip().split(maxsplit=1)
         srcfile = src / file
@@ -346,11 +346,8 @@ class Trees:
         else:
             validate_name(name)
 
-        pathstr = self.args.path
-        if '{repo}' not in pathstr or '{worktree}' not in pathstr:
-            sys.exit(
-                'error: -P/--path must contain "{repo}" and "{worktree}" placeholders.'
-            )
+        if '{worktree}' not in (pathstr := self.args.path):
+            sys.exit('error: -P/--path must contain "{worktree}" placeholder.')
 
         worktree = name.replace('/', '-')
 
@@ -435,7 +432,7 @@ def main() -> int:
         '--path',
         default=PATH,
         help='directory path template for newly added worktrees, default="%(default)s". '
-        'Can use {repo}, {worktree}, {user}, and {home} placeholders.',
+        'Can use {worktree}, {repo}, {user}, and {home} placeholders.',
     )
     opt.add_argument(
         '-R',
