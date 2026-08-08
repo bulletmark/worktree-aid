@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "worktree-aid"
-description = "Linux command line tool to aid creating, switching, and removing git worktrees"
+description = "Command line tool to aid creating, switching, and removing git worktrees"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 requires-python = ">=3.10"

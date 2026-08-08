@@ -2,9 +2,9 @@
 [![PyPi](https://img.shields.io/pypi/v/worktree-aid)](https://pypi.org/project/worktree-aid/)
 [![AUR](https://img.shields.io/aur/version/worktree-aid)](https://aur.archlinux.org/packages/worktree-aid/)
 
-This is a Linux command line tool to conveniently add, remove, and change
-directories for [git worktrees][gitw]. A [fuzzy finder][fzf] is used to show
-current worktrees and prompt for the name if not given.
+This is a command line tool to easily add, remove, and change directories for
+[git worktrees][gitw]. Prompts user with list of worktrees using [fuzzy
+finder][fzf].
 
 After following the instructions in the [Installation](#installation-or-upgrade)
 and [Setup](#setup) sections below, an `wt` shell command/alias is available to
@@ -40,14 +40,14 @@ Type `wt` or `wt -h` to view the usage summary:
 usage: wt [-P PATH] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
                        {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
 
-Linux command line tool to conveniently add, remove, and change directories
-for git worktrees. Prompts user to select worktree using fuzzy finder if no
-worktree name is given.
+Command line tool to easily add, remove, and change directories for git
+worktrees. Prompts user with list of worktrees using fuzzy finder.
 
 options:
   -P, --path PATH       directory path template for newly added worktrees,
                         default="../worktrees/{repo}/{worktree}". Can use
                         {worktree}, {repo}, {user}, and {home} placeholders.
+                        Must contain {worktree} at least.
   -R, --relative        display worktree paths relative instead of absolute
   -r                    toggle -R/--relative option for one-off command only
   -U, --no-user         do not substitute "~" for user home directory
@@ -272,8 +272,7 @@ template:
 - `{home}`: Substituted with the home directory of the user (also can use `~`
    at start of a path).
 
-It is compulsory to have at least the `{worktree}` placeholder somewhere in
-your path definition.
+Your path definition *must* at least contain the `{worktree}` placeholder.
 
 Most likely if you want to set a custom path then you will set `-P`
 as a [default option](#default-options).

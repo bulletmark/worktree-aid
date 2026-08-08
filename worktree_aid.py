@@ -1,7 +1,6 @@
 """
-Linux command line tool to conveniently add, remove, and change directories for
-git worktrees. Prompts user to select worktree using fuzzy finder if no worktree
-name is given.
+Command line tool to easily add, remove, and change directories for git
+worktrees. Prompts user with list of worktrees using fuzzy finder.
 """
 
 from __future__ import annotations
@@ -118,6 +117,11 @@ def unexpanduser(path: Path) -> Path:
     return Path('~', *path.parts[len(HOME.parts) :])
 
 
+def relpath(path: Path) -> str:
+    "Return path relative to current working directory"
+    return os.path.relpath(path)
+
+
 def generate_new_name(exists: set[str]) -> str:
     "Generate a new worktree name"
     from coolname import generate_slug
@@ -168,13 +172,13 @@ def copyfiles(src: Path, dst: Path, stdout: Any, relative: bool) -> None:
         if not (line := line.strip()):
             continue
 
-        _status, file = line.strip().split(maxsplit=1)
+        _status, file = line.split(maxsplit=1)
         srcfile = src / file
         dstfile = dst / file
-        sfile = os.path.relpath(srcfile) if relative else str(srcfile)
-        dfile = os.path.relpath(dstfile) if relative else str(dstfile)
+        sfile = relpath(srcfile) if relative else str(srcfile)
+        dfile = relpath(dstfile) if relative else str(dstfile)
 
-        if os.path.lexists(srcfile):
+        if srcfile.is_symlink() or srcfile.exists():
             if stdout:
                 print(f'Copying {sfile} to {dfile}', file=stdout)
 
@@ -183,7 +187,7 @@ def copyfiles(src: Path, dst: Path, stdout: Any, relative: bool) -> None:
 
             dstfile.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-        elif os.path.lexists(dstfile):
+        elif dstfile.is_symlink() or dstfile.exists():
             if stdout:
                 print(f'Removing {dfile}', file=stdout)
 
@@ -241,7 +245,7 @@ class Trees:
                 path = Path(value)
 
                 if args.relative:
-                    path_display = os.path.relpath(path)
+                    path_display = relpath(path)
                 elif args.no_user:
                     path_display = str(path)
                 else:
@@ -274,7 +278,7 @@ class Trees:
 
     def get_trees(self) -> list[str]:
         "Fetch string list of worktrees"
-        width = max(len(str(t.path_display)) for t in self.trees)
+        width = max(len(t.path_display) for t in self.trees)
         trees = []
         for t in self.trees:
             tlist = [f'{t.path_display:{width}}']
@@ -391,6 +395,10 @@ class Trees:
             # Change to the top-level worktree directory before deleting this worktree
             # because we are removing the current directory
             os.chdir(newpath := self.toplevel.path)
+
+            # Recompute the relative path to the worktree from the new current directory
+            if self.args.relative:
+                tree.path_display = relpath(tree.path)
         else:
             newpath = None
 
@@ -398,16 +406,13 @@ class Trees:
         if self.args.force:
             cmd.append('--force')
 
-        cmd.append(path_display := str(path := tree.path))
+        cmd.append(str(tree.path))
         run(cmd, stdout=self.args._stdout)
 
-        if self.args.relative:
-            path_display = os.path.relpath(path_display)
-
-        print(f'Removed worktree "{path_display}"', file=self.args._stdout)
+        print(f'Removed worktree "{tree.path_display}"', file=self.args._stdout)
 
         # Also remove parent directories of the worktree if they are empty
-        rm_parents(path)
+        rm_parents(tree.path)
 
         if tree.branch and not self.args.keep_branch:
             cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
@@ -432,7 +437,8 @@ def main() -> int:
         '--path',
         default=PATH,
         help='directory path template for newly added worktrees, default="%(default)s". '
-        'Can use {worktree}, {repo}, {user}, and {home} placeholders.',
+        'Can use {worktree}, {repo}, {user}, and {home} placeholders. '
+        'Must contain {worktree} at least.',
     )
     opt.add_argument(
         '-R',
@@ -526,7 +532,7 @@ def main() -> int:
 
     if args.version:
         print_version(args)
-    elif args.help or 'func' not in args:
+    elif args.help or 'func' not in args or '-h' in sys.argv or '--help' in sys.argv:
         print_help(args)
     elif out := args.func(args):
         print(out)
