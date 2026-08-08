@@ -132,19 +132,18 @@ aliases: c
 ### Command `fetch`
 
 ```
-usage: wt fetch [-h] [-c COMMIT] [-q] [worktree]
+usage: wt fetch [-h] [-q] [worktree]
 
 Fetch changes from another worktree.
 
 positional arguments:
-  worktree             Worktree name to copy from. "/" is a shortcut to the
-                       toplevel repository. If not specified then fuzzy finder
-                       will prompt with a list of worktrees.
+  worktree     Worktree name to copy from. "/" is a shortcut to the toplevel
+               repository. If not specified then fuzzy finder will prompt with
+               a list of worktrees.
 
 options:
-  -h, --help           show help message and exit
-  -c, --commit COMMIT  fetch changes relative to given commit, default="HEAD"
-  -q, --quiet          suppress output of copied files
+  -h, --help   show help message and exit
+  -q, --quiet  suppress output of copied files
 
 aliases: f
 ```

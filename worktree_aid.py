@@ -143,7 +143,7 @@ def print_version(args: Namespace) -> None:
 
 def print_help(args: Namespace) -> None:
     "Print program help message"
-    if 'parser' in args:
+    if hasattr(args, 'parser'):
         args.parser.print_help(args._stdout)
     else:
         args._opt.print_help(args._stdout)
@@ -161,10 +161,14 @@ def validate_name(name: str) -> None:
         sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
 
 
-def copyfiles(src: Path, dst: Path, stdout: Any, commit: str, relative: bool) -> None:
+def copyfiles(src: Path, dst: Path, stdout: Any, relative: bool) -> None:
     "Copy git changes from src worktree to dst worktree"
-    cmd = ('git', '-C', str(src), 'diff', commit, '--name-only')
-    for file in run(cmd).splitlines():
+    cmd = ('git', '-C', str(src), 'status', '--porcelain', '-z')
+    for line in run(cmd).split('\0'):
+        if not (line := line.strip()):
+                continue
+
+        _status, file = line.strip().split(maxsplit=1)
         srcfile = src / file
         dstfile = dst / file
         sfile = os.path.relpath(srcfile) if relative else str(srcfile)
@@ -386,9 +390,12 @@ class Trees:
             )
             return None
 
-        # Change to the top-level worktree directory before deleting a worktree
-        # and/or branch, in case the current directory is removed.
-        os.chdir(self.toplevel.path)
+        if tree == self.current:
+            # Change to the top-level worktree directory before deleting this worktree
+            # because we are removing the current directory
+            os.chdir(newpath := self.toplevel.path)
+        else:
+            newpath = None
 
         cmd = ['git', 'worktree', 'remove']
         if self.args.force:
@@ -409,7 +416,7 @@ class Trees:
             cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
             run(cmd, stdout=self.args._stdout, ignore_error=True)
 
-        return self.toplevel.path if tree == self.current else None
+        return newpath
 
 
 def main() -> int:
@@ -615,7 +622,9 @@ class rm_:
             if args.worktree:
                 sys.exit('error: cannot specify any worktree name with --all option.')
 
-            names = [t.path.name for t in trees.trees if t != trees.toplevel]
+            names = [
+                n for t in trees.trees if t != trees.toplevel and (n := t.path.name)
+            ]
         else:
             names = args.worktree or ['']
 
@@ -666,12 +675,6 @@ class fetch_:
     @staticmethod
     def init(parser: ArgumentParser) -> None:
         parser.add_argument(
-            '-c',
-            '--commit',
-            default='HEAD',
-            help='fetch changes relative to given commit, default="%(default)s"',
-        )
-        parser.add_argument(
             '-q',
             '--quiet',
             action='store_true',
@@ -693,7 +696,7 @@ class fetch_:
             dstpath = trees.current.path
             if not srcpath.samefile(dstpath):
                 stdout = None if args.quiet else args._stdout
-                copyfiles(srcpath, dstpath, stdout, args.commit, args.relative)
+                copyfiles(srcpath, dstpath, stdout, args.relative)
 
         return None
 
