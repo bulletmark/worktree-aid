@@ -15,7 +15,7 @@ from argparse import SUPPRESS, ArgumentParser, Namespace
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 PROG = Path(__file__).stem.replace('_', '-')
 HOME = Path.home()
@@ -421,6 +421,15 @@ class Trees:
         return newpath
 
 
+class Command:
+    commands: ClassVar = []
+
+    @classmethod
+    def add(cls, command: Any) -> None:
+        "Add command class to list of commands"
+        cls.commands.append(command)
+
+
 def main() -> int:
     "Main code"
     # Main returns a status code:
@@ -478,12 +487,8 @@ def main() -> int:
     cmd = opt.add_subparsers(title='Commands')
 
     # Add each command ..
-    for name in globals():
-        if not name[0].islower() or not name.endswith('_'):
-            continue
-
-        cls = globals()[name]
-        name = name[:-1]
+    for cls in Command.commands:
+        name = cls.__name__
 
         if hasattr(cls, 'doc'):
             desc = cls.doc.strip()
@@ -545,8 +550,8 @@ def main() -> int:
     return shell_return
 
 
-# COMMAND
-class add_:
+@Command.add
+class add:
     "Add new worktree + branch."
 
     aliases = ('a',)
@@ -582,8 +587,8 @@ class add_:
         return str(retpath) if retpath and not args.no_cd else None
 
 
-# COMMAND
-class rm_:
+@Command.add
+class rm:
     "Remove worktree + branch."
 
     aliases = ('r',)
@@ -646,8 +651,8 @@ class rm_:
         return str(retpath) if retpath else None
 
 
-# COMMAND
-class cd_:
+@Command.add
+class cd:
     "Change worktree directory."
 
     aliases = ('c',)
@@ -669,8 +674,8 @@ class cd_:
         return str(tree.path) if tree else None
 
 
-# COMMAND
-class fetch_:
+@Command.add
+class fetch:
     "Fetch changes from another worktree."
 
     aliases = ('f',)
@@ -704,8 +709,8 @@ class fetch_:
         return None
 
 
-# COMMAND
-class ls_:
+@Command.add
+class ls:
     "List worktrees."
 
     aliases = ('l',)
@@ -719,8 +724,8 @@ class ls_:
         return None
 
 
-# COMMAND
-class init_:
+@Command.add
+class init:
     doc = f"""
     Output shell initialization code.
     Must be invoked using `source <({PROG})` in your shell `~/.bashrc` or
