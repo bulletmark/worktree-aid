@@ -97,7 +97,7 @@ def run(
     return ''
 
 
-def get_title(desc: str) -> str:
+def get_title(desc: str, name: str) -> str:
     "Return single title line from command description"
     res = []
     for line in desc.splitlines():
@@ -106,7 +106,7 @@ def get_title(desc: str) -> str:
         if line.endswith('.'):
             return ' '.join(res)
 
-    sys.exit('Must end description with a full stop.')
+    sys.exit(f'Must end {name} command description with a full stop.')
 
 
 def unexpanduser(path: Path) -> Path:
@@ -351,7 +351,9 @@ class Trees:
             validate_name(name)
 
         if '{worktree}' not in (pathstr := self.args.path):
-            sys.exit('error: -P/--path must contain "{worktree}" placeholder.')
+            sys.exit(
+                f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
+            )
 
         worktree = name.replace('/', '-')
 
@@ -363,7 +365,7 @@ class Trees:
                 home=str(HOME),
             )
         except Exception as e:
-            sys.exit(f'error: failed to format -P/--path: {e}')
+            sys.exit(f'error: failed to format -P/--path "{pathstr}": {e}')
 
         path = Path(pathstr).expanduser()
         path = (self.toplevel.path / path).resolve()
@@ -497,7 +499,7 @@ def main() -> int:
         else:
             sys.exit(f'Must define a docstring for command class "{name}".')
 
-        title = get_title(desc)
+        title = get_title(desc, name)
         aliases = cls.aliases if hasattr(cls, 'aliases') else []
         cmdopt = cmd.add_parser(
             name, description=desc, aliases=aliases, help=title, add_help=False
@@ -628,7 +630,7 @@ class rm:
 
         if args.all:
             if args.worktree:
-                sys.exit('error: cannot specify any worktree name with --all option.')
+                sys.exit('error: cannot specify a worktree name with --all option.')
 
             names = [
                 n for t in trees.trees if t != trees.toplevel and (n := t.path.name)
