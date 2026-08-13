@@ -14,7 +14,7 @@ upload: build
   uv-publish
 
 doc:
-  update-readme-usage -A -S "s/worktree[-_]aid/wt/g"
+  update-readme-usage -r wt
 
 format:
   ruff check --select I --fix {{PYFILES}} && ruff format {{PYFILES}}

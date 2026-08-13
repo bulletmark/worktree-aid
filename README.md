@@ -19,11 +19,12 @@ use to manage git worktrees. There are 3 commonly used commands:
   worktree name, then a [fuzzy finder][fzf] will prompt you with a list of
   worktrees to select from and be cd'd to.
 
-- `wt rm` (or `wt r`) to remove a worktree + branch. If you don't specify a
-  worktree name, then a [fuzzy finder][fzf] will prompt you with a list of
-  worktrees to select from. The current worktree is first in the list and is the
-  default selection to remove. If you remove the current worktree then you will
-  be automatically cd'd to the toplevel repository directory.
+- `wt rm` (or `wt r`) to remove a worktree + branch. You can use `.` as a
+  shortcut for the current worktree. If you don't specify a worktree name, then a
+  [fuzzy finder][fzf] will prompt you with a list of worktrees to select from.
+  The current worktree is first in the list and is the default selection to
+  remove. If you remove the current worktree then you will be automatically cd'd
+  to the toplevel repository directory.
 
 There are some other options and commands available, as described in the next
 section. Type `wt` to see an overall help/usage summary, or `wt <command> -h`
@@ -38,7 +39,7 @@ Type `wt` or `wt -h` to view the usage summary:
 
 ```
 usage: wt [-P PATH] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
-                       {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
+                    {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
 
 Command line tool to easily add, remove, and change directories for git
 worktrees. Prompts user with list of worktrees using fuzzy finder.
@@ -66,8 +67,7 @@ Commands:
     init                Output shell initialization code.
 ```
 
-Type `wt <command> -h` to see specific help/usage for any
-individual command:
+Type `wt <command> -h` to see specific help/usage for any individual command:
 
 ### Command `add`
 
@@ -96,7 +96,7 @@ usage: wt rm [-h] [-k] [-f] [-a] [worktree ...]
 Remove worktree + branch.
 
 positional arguments:
-  worktree           worktree + branch name to remove. "." is a shortcut to
+  worktree           worktree + branch name to remove. "." is a shortcut for
                      the current worktree. If not specified then fuzzy finder
                      will prompt with a list of worktrees, with the current
                      worktree as the default selection.

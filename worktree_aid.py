@@ -106,7 +106,7 @@ def get_title(desc: str, name: str) -> str:
         if line.endswith('.'):
             return ' '.join(res)
 
-    sys.exit(f'Must end {name} command description with a full stop.')
+    sys.exit(f'Mwoust end {name} command description with a full stop.')
 
 
 def unexpanduser(path: Path) -> Path:
@@ -619,7 +619,7 @@ class rm:
         parser.add_argument(
             'worktree',
             nargs='*',
-            help='worktree + branch name to remove. "." is a shortcut to the current worktree. '
+            help='worktree + branch name to remove. "." is a shortcut for the current worktree. '
             'If not specified then fuzzy finder will prompt with a list of worktrees, with the '
             'current worktree as the default selection.',
         )
