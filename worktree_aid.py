@@ -3,8 +3,6 @@ Command line tool to easily add, remove, and change directories for git
 worktrees. Prompts user with list of worktrees using fuzzy finder.
 """
 
-from __future__ import annotations
-
 import getpass
 import os
 import shlex
@@ -219,7 +217,7 @@ class Tree:
 
     path: Path
     path_display: str
-    head: str = ''
+    head: str = ' ' * HASH_LEN
     branch: str = ''
 
 
@@ -281,15 +279,8 @@ class Trees:
         width = max(len(t.path_display) for t in self.trees)
         trees = []
         for t in self.trees:
-            tlist = [f'{t.path_display:{width}}']
-            if t.head:
-                tlist.append(t.head)
-            if t.branch:
-                tlist.append(f'[{t.branch}]')
-            else:
-                tlist.append('detached')
-
-            trees.append(' '.join(tlist))
+            branch = f'[{t.branch}]' if t.branch else 'detached'
+            trees.append(f'{t.path_display:{width}} {t.head} {branch}')
 
         return trees
 
