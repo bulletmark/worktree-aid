@@ -695,7 +695,7 @@ class fetch:
             'worktree',
             default='',
             nargs='?',
-            help='Worktree name to copy from. "/" is a shortcut to the toplevel repository. '
+            help='Worktree name to fetch changes from. "/" is a shortcut to the toplevel repository. '
             'If not specified then fuzzy finder will prompt with a list of worktrees.',
         )
 
