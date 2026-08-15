@@ -163,36 +163,46 @@ def validate_name(name: str) -> None:
         sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
 
 
-def copyfiles(src: Path, dst: Path, stdout: Any, relative: bool) -> None:
-    "Copy git changes from src worktree to dst worktree"
-    cmd = ('git', '-C', str(src), 'status', '--porcelain', '-z')
-    for line in run(cmd).split('\0'):
+def copyfile(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
+    "Copy a file from src worktree to target worktree"
+    sfile = relpath(src) if relative else str(src)
+    tfile = relpath(tgt) if relative else str(tgt)
+
+    if src.exists() or src.is_symlink():
+        if stdout:
+            print(f'Copying "{sfile}" to "{tfile}"', file=stdout)
+
+        if tgt.is_dir() and not tgt.is_symlink():
+            shutil.rmtree(tgt)
+
+        tgt.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, tgt, follow_symlinks=False)
+    elif tgt.is_symlink() or tgt.exists():
+        if stdout:
+            print(f'Removing "{tfile}"', file=stdout)
+
+        if tgt.is_dir() and not tgt.is_symlink():
+            shutil.rmtree(tgt)
+        else:
+            tgt.unlink()
+
+
+def copyfiles(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
+    "Copy git changes from src worktree to target worktree"
+    cmd = ('git', '-C', str(src), 'status', '--porcelain')
+    for line in run(cmd).splitlines():
         if not (line := line.strip()):
             continue
 
-        _status, file = line.split(maxsplit=1)
-        srcfile = src / file
-        dstfile = dst / file
-        sfile = relpath(srcfile) if relative else str(srcfile)
-        dfile = relpath(dstfile) if relative else str(dstfile)
+        status, rest = line.split(maxsplit=1)
 
-        if srcfile.is_symlink() or srcfile.exists():
-            if stdout:
-                print(f'Copying {sfile} to {dfile}', file=stdout)
-
-            if dstfile.is_dir() and not dstfile.is_symlink():
-                shutil.rmtree(dstfile)
-
-            dstfile.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(srcfile, dstfile, follow_symlinks=False)
-        elif dstfile.is_symlink() or dstfile.exists():
-            if stdout:
-                print(f'Removing {dfile}', file=stdout)
-
-            if dstfile.is_dir() and not dstfile.is_symlink():
-                shutil.rmtree(dstfile)
-            else:
-                dstfile.unlink()
+        if status in ('R', 'C') and ' -> ' in rest:
+            for file in rest.split(' -> ', maxsplit=1):
+                file = file.strip().strip('"')
+                copyfile(src / file, tgt / file, stdout, relative)
+        else:
+            file = rest.strip('"')
+            copyfile(src / file, tgt / file, stdout, relative)
 
 
 def rm_parents(path: Path) -> None:
@@ -694,10 +704,11 @@ class fetch:
         trees = Trees(args)
         if tree := trees.get_or_ask_tree(args.worktree):
             srcpath = tree.path
-            dstpath = trees.current.path
-            if not srcpath.samefile(dstpath):
-                stdout = None if args.quiet else args._stdout
-                copyfiles(srcpath, dstpath, stdout, args.relative)
+            if srcpath.samefile(tgtpath := trees.current.path):
+                sys.exit(f'error: can not fetch from the same worktree "{srcpath}".')
+
+            stdout = None if args.quiet else args._stdout
+            copyfiles(srcpath, tgtpath, stdout, args.relative)
 
         return None
 
