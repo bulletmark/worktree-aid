@@ -40,7 +40,7 @@ Type `wt` or `wt -h` to view the usage summary:
 
 ```
 usage: wt [-P PATH] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
-                    {add,a,rm,r,cd,c,fetch,f,ls,l,init} ...
+                    {add,a,rm,r,cd,c,fetch,f,ls,l,init,i} ...
 
 Command line tool to easily add, remove, and change directories for git
 worktrees. Prompts user with list of worktrees using fuzzy finder.
@@ -59,13 +59,13 @@ options:
   -h, --help            show help message and exit
 
 Commands:
-  {add,a,rm,r,cd,c,fetch,f,ls,l,init}
+  {add,a,rm,r,cd,c,fetch,f,ls,l,init,i}
     add (a)             Add new worktree + branch.
     rm (r)              Remove worktree + branch.
     cd (c)              Change worktree directory.
     fetch (f)           Fetch changes from another worktree.
     ls (l)              List worktrees.
-    init                Output shell initialization code and set default
+    init (i)            Output shell initialization code and set default
                         options.
 ```
 
@@ -181,6 +181,8 @@ positional arguments:
 
 options:
   -h, --help  show help message and exit
+
+aliases: i
 ```
 
 ## Installation or Upgrade

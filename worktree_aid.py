@@ -501,9 +501,8 @@ def main() -> int:
             sys.exit(f'Must define a docstring for command class "{name}".')
 
         title = get_title(desc, name)
-        aliases = cls.aliases if hasattr(cls, 'aliases') else []
         cmdopt = cmd.add_parser(
-            name, description=desc, aliases=aliases, help=title, add_help=False
+            name, description=desc, aliases=name[0], help=title, add_help=False
         )
         cmdopt.add_argument(
             '-h', '--help', action='store_true', help='show help message and exit'
@@ -557,8 +556,6 @@ def main() -> int:
 class add:
     "Add new worktree + branch."
 
-    aliases = ('a',)
-
     @staticmethod
     def init(parser: ArgumentParser) -> None:
         parser.add_argument(
@@ -594,8 +591,6 @@ class add:
 @Command.add
 class rm:
     "Remove worktree + branch."
-
-    aliases = ('r',)
 
     @staticmethod
     def init(parser: ArgumentParser) -> None:
@@ -659,8 +654,6 @@ class rm:
 class cd:
     "Change worktree directory."
 
-    aliases = ('c',)
-
     @staticmethod
     def init(parser: ArgumentParser) -> None:
         parser.add_argument(
@@ -681,8 +674,6 @@ class cd:
 @Command.add
 class fetch:
     "Fetch changes from another worktree."
-
-    aliases = ('f',)
 
     @staticmethod
     def init(parser: ArgumentParser) -> None:
@@ -717,8 +708,6 @@ class fetch:
 @Command.add
 class ls:
     "List worktrees."
-
-    aliases = ('l',)
 
     @staticmethod
     def run(args: Namespace) -> str | None:
