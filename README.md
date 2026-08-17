@@ -74,7 +74,7 @@ Type `wt <command> -h` to see specific help/usage for any individual command:
 ### Command `add`
 
 ```
-usage: wt add [-h] [-d] [-c] [worktree ...]
+usage: wt add [-d] [-c] [-h] [worktree ...]
 
 Add new worktree + branch.
 
@@ -84,9 +84,9 @@ positional arguments:
                 create a new worktree for that branch.
 
 options:
-  -h, --help    show help message and exit
   -d, --detach  add detached worktree only, i.e. without adding a new branch
   -c, --no-cd   do not change directory to new worktree after adding it
+  -h, --help    show help message and exit
 
 aliases: a
 ```
@@ -94,7 +94,7 @@ aliases: a
 ### Command `rm`
 
 ```
-usage: wt rm [-h] [-k] [-f] [-a] [worktree ...]
+usage: wt rm [-k] [-f] [-a] [-h] [worktree ...]
 
 Remove worktree + branch.
 
@@ -105,11 +105,11 @@ positional arguments:
                      worktree as the default selection.
 
 options:
-  -h, --help         show help message and exit
   -k, --keep-branch  remove worktree but keep branch
   -f, --force        force removal of worktree + branch even if untracked or
                      unmerged changes exist.
   -a, --all          remove all worktrees
+  -h, --help         show help message and exit
 
 aliases: r
 ```
@@ -135,7 +135,7 @@ aliases: c
 ### Command `fetch`
 
 ```
-usage: wt fetch [-h] [-q] [worktree]
+usage: wt fetch [-q] [-h] [worktree]
 
 Fetch changes from another worktree.
 
@@ -145,8 +145,8 @@ positional arguments:
                prompt with a list of worktrees.
 
 options:
-  -h, --help   show help message and exit
   -q, --quiet  suppress output of copied files
+  -h, --help   show help message and exit
 
 aliases: f
 ```
@@ -199,7 +199,7 @@ $ uv tool upgrade worktree-aid
 $ uv tool uninstall worktree-aid
 ```
 
-Or, on Arch Linux:
+Or, on [Arch Linux][AUR]:
 
 ```sh
 $ yay -S worktree-aid  # or your preferred AUR helper
@@ -339,3 +339,4 @@ GPL-3.0-or-later.
 [Zed]: https://zed.dev/
 [VS Code]: https://code.visualstudio.com/
 [Git]: https://git-scm.com/
+[AUR]: https://aur.archlinux.org/packages/worktree-aid/

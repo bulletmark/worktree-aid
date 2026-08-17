@@ -504,13 +504,15 @@ def main() -> int:
         cmdopt = cmd.add_parser(
             name, description=desc, aliases=name[0], help=title, add_help=False
         )
-        cmdopt.add_argument(
-            '-h', '--help', action='store_true', help='show help message and exit'
-        )
 
         # Set up this commands own arguments, if it has any
         if hasattr(cls, 'init'):
             cls.init(cmdopt)
+
+        # Add the help option for this command
+        cmdopt.add_argument(
+            '-h', '--help', action='store_true', help='show help message and exit'
+        )
 
         # Set the function to call
         cmdopt.set_defaults(func=cls.run, parser=cmdopt)
