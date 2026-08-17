@@ -12,19 +12,20 @@ use to manage git worktrees. There are 3 commonly used commands:
 
 - `wt add` (or `wt a`) to add a new worktree + branch and automatically cd to
   it. If you don't specify a worktree name, a new unique name will be
-  automatically created for you.
+  automatically created for you. If you specify an existing branch name then a
+  new worktree will be created for that branch.
 
 - `wt cd` (or `wt c`) to change directory to a specified worktree. You can use
-  `/` as a shortcut to the toplevel repository directory. If you don't specify a
+  `/` as a shortcut to the top-level repository directory. If you don't specify a
   worktree name, then a [fuzzy finder][fzf] will prompt you with a list of
   worktrees to select from and be cd'd to.
 
 - `wt rm` (or `wt r`) to remove a worktree + branch. You can use `.` as a
-  shortcut for the current worktree. If you don't specify a worktree name, then a
-  [fuzzy finder][fzf] will prompt you with a list of worktrees to select from.
+  shortcut for the current worktree. If you don't specify a worktree name, then
+  a [fuzzy finder][fzf] will prompt you with a list of worktrees to select from.
   The current worktree is first in the list and is the default selection to
   remove. If you remove the current worktree then you will be automatically cd'd
-  to the toplevel repository directory.
+  to the top-level repository directory.
 
 There are some other options and commands available, as described in the next
 section. Type `wt` to see an overall help/usage summary, or `wt <command> -h`
@@ -64,7 +65,8 @@ Commands:
     cd (c)              Change worktree directory.
     fetch (f)           Fetch changes from another worktree.
     ls (l)              List worktrees.
-    init                Output shell initialization code.
+    init                Output shell initialization code and set default
+                        options.
 ```
 
 Type `wt <command> -h` to see specific help/usage for any individual command:
@@ -78,7 +80,8 @@ Add new worktree + branch.
 
 positional arguments:
   worktree      new worktree + branch to add. A name is automatically created
-                if not specified.
+                if not specified. Can also specify an existing branch name to
+                create a new worktree for that branch.
 
 options:
   -h, --help    show help message and exit
@@ -120,7 +123,7 @@ Change worktree directory.
 
 positional arguments:
   worktree    Worktree name to change directory to. "/" is a shortcut to the
-              toplevel repository. If not specified then fuzzy finder will
+              top-level repository. If not specified then fuzzy finder will
               prompt with a list of worktrees.
 
 options:
@@ -138,7 +141,7 @@ Fetch changes from another worktree.
 
 positional arguments:
   worktree     Worktree name to fetch changes from. "/" is a shortcut to the
-               toplevel repository. If not specified then fuzzy finder will
+               top-level repository. If not specified then fuzzy finder will
                prompt with a list of worktrees.
 
 options:
@@ -166,9 +169,11 @@ aliases: l
 ```
 usage: wt init [-h] [command]
 
-Output shell initialization code. Must be invoked using `source <(worktree-
-aid)` in your shell `~/.bashrc` or `~/.zshrc` initialization file to create
-the shell alias/function by which you invoke this program.
+Output shell initialization code and set default options. Must be invoked
+using `source <(worktree-aid init)` in your shell `~/.bashrc` or `~/.zshrc`
+initialization file to create the shell alias/function by which you invoke
+this program. You can also append preferred default options to the command
+name, e.g. `source <(worktree-aid init "wt -R")`.
 
 positional arguments:
   command     alternative command name, and optional default arguments,
@@ -253,7 +258,7 @@ The following options are sensible candidates to set as default options:
 The `-P/--path` option allows you to specify the directory path template for
 newly added worktrees. It is set to a default as below but you can change this
 to any directory you like. It can be absolute or relative where relative paths
-are relative to base toplevel repository directory.
+are relative to base top-level repository directory.
 
 - Default base directory is `-P ../worktrees/{repo}/{worktree}`.
 - E.g. can use `-P ../worktrees/{repo}/{worktree}/{repo}` which is same as [Zed]

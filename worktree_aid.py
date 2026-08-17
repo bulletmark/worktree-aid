@@ -576,7 +576,8 @@ class add:
         parser.add_argument(
             'worktree',
             nargs='*',
-            help='new worktree + branch to add. A name is automatically created if not specified.',
+            help='new worktree + branch to add. A name is automatically created if not specified. '
+            'Can also specify an existing branch name to create a new worktree for that branch.',
         )
 
     @staticmethod
@@ -666,7 +667,7 @@ class cd:
             'worktree',
             default='',
             nargs='?',
-            help='Worktree name to change directory to. "/" is a shortcut to the toplevel repository. '
+            help='Worktree name to change directory to. "/" is a shortcut to the top-level repository. '
             'If not specified then fuzzy finder will prompt with a list of worktrees.',
         )
 
@@ -695,7 +696,7 @@ class fetch:
             'worktree',
             default='',
             nargs='?',
-            help='Worktree name to fetch changes from. "/" is a shortcut to the toplevel repository. '
+            help='Worktree name to fetch changes from. "/" is a shortcut to the top-level repository. '
             'If not specified then fuzzy finder will prompt with a list of worktrees.',
         )
 
@@ -731,10 +732,11 @@ class ls:
 @Command.add
 class init:
     doc = f"""
-    Output shell initialization code.
-    Must be invoked using `source <({PROG})` in your shell `~/.bashrc` or
+    Output shell initialization code and set default options.
+    Must be invoked using `source <({PROG} init)` in your shell `~/.bashrc` or
     `~/.zshrc` initialization file to create the shell alias/function by which
-    you invoke this program.
+    you invoke this program. You can also append preferred default options to
+    the command name, e.g. `source <({PROG} init \"wt -R\")`.
     """
 
     @staticmethod
