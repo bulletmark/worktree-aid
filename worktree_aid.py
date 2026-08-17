@@ -163,10 +163,10 @@ def validate_name(name: str) -> None:
         sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
 
 
-def copyfile(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
+def copyfile(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
     "Copy a file from src worktree to target worktree"
-    sfile = relpath(src) if relative else str(src)
-    tfile = relpath(tgt) if relative else str(tgt)
+    sfile = relpath(src) if args.relative else str(src)
+    tfile = relpath(tgt) if args.relative else str(tgt)
 
     if src.exists() or src.is_symlink():
         if stdout:
@@ -187,9 +187,12 @@ def copyfile(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
             tgt.unlink()
 
 
-def copyfiles(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
+def copyfiles(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
     "Copy git changes from src worktree to target worktree"
-    cmd = ('git', '-C', str(src), 'status', '--porcelain')
+    cmd = ['git', '-C', str(src), 'status', '--porcelain']
+    if args.ignored:
+        cmd.extend(['--ignored', '-uall'])
+
     for line in run(cmd).splitlines():
         if not (line := line.strip()):
             continue
@@ -199,10 +202,10 @@ def copyfiles(src: Path, tgt: Path, stdout: Any, relative: bool) -> None:
         if status in ('R', 'C') and ' -> ' in rest:
             for file in rest.split(' -> ', maxsplit=1):
                 file = file.strip().strip('"')
-                copyfile(src / file, tgt / file, stdout, relative)
+                copyfile(src / file, tgt / file, stdout, args)
         else:
             file = rest.strip('"')
-            copyfile(src / file, tgt / file, stdout, relative)
+            copyfile(src / file, tgt / file, stdout, args)
 
 
 def rm_parents(path: Path) -> None:
@@ -686,6 +689,12 @@ class fetch:
             help='suppress output of copied files',
         )
         parser.add_argument(
+            '-i',
+            '--ignored',
+            action='store_true',
+            help='also copy ignored files',
+        )
+        parser.add_argument(
             'worktree',
             default='',
             nargs='?',
@@ -702,7 +711,7 @@ class fetch:
                 sys.exit(f'error: can not fetch from the same worktree "{srcpath}".')
 
             stdout = None if args.quiet else args._stdout
-            copyfiles(srcpath, tgtpath, stdout, args.relative)
+            copyfiles(srcpath, tgtpath, stdout, args)
 
         return None
 
