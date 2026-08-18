@@ -374,6 +374,9 @@ class Trees:
         path = Path(pathstr).expanduser()
         path = (self.toplevel.path / path).resolve()
 
+        if path.exists():
+            sys.exit(f'error: worktree path "{relpath(path)}" already exists.')
+
         cmd = ['git', 'worktree', 'add', str(path)]
         if self.args.detach:
             cmd.append('--detach')
