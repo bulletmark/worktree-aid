@@ -115,9 +115,15 @@ def unexpanduser(path: Path) -> Path:
     return Path('~', *path.parts[len(HOME.parts) :])
 
 
-def relpath(path: Path) -> str:
-    "Return path relative to current working directory"
-    return os.path.relpath(path)
+def path_as_displayed(path: Path, args: Namespace) -> str:
+    "Return displayed path"
+
+    if args.relative:
+        return os.path.relpath(path)
+    elif not args.no_user:
+        return str(unexpanduser(path))
+
+    return str(path)
 
 
 def generate_new_name(exists: set[str]) -> str:
@@ -165,11 +171,10 @@ def validate_name(name: str) -> None:
 
 def copyfile(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
     "Copy a file from src worktree to target worktree"
-    sfile = relpath(src) if args.relative else str(src)
-    tfile = relpath(tgt) if args.relative else str(tgt)
-
     if src.exists() or src.is_symlink():
         if stdout:
+            sfile = path_as_displayed(src, args)
+            tfile = path_as_displayed(tgt, args)
             print(f'Copying "{sfile}" to "{tfile}"', file=stdout)
 
         if tgt.is_dir() and not tgt.is_symlink():
@@ -179,6 +184,7 @@ def copyfile(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
         shutil.copy2(src, tgt, follow_symlinks=False)
     elif tgt.is_symlink() or tgt.exists():
         if stdout:
+            tfile = path_as_displayed(tgt, args)
             print(f'Removing "{tfile}"', file=stdout)
 
         if tgt.is_dir() and not tgt.is_symlink():
@@ -229,9 +235,13 @@ class Tree:
     "Data for an individual worktree"
 
     path: Path
-    path_display: str
+    path_display: str = ''
     head: str = ' ' * HASH_LEN
     branch: str = ''
+
+    def calc_path_display(self, args: Namespace):
+        "[Re]compute the displayed path to the worktree"
+        self.path_display = path_as_displayed(self.path, args)
 
 
 class Trees:
@@ -254,20 +264,14 @@ class Trees:
 
             if field == 'worktree':
                 path = Path(value)
-
-                if args.relative:
-                    path_display = relpath(path)
-                elif args.no_user:
-                    path_display = str(path)
-                else:
-                    path_display = str(unexpanduser(path))
-
                 plen = len(path.parts)
                 if path.parts == cwdparts[:plen] and plen > phere:
                     phere = plen
                     pindex = len(trees)
 
-                trees.append(tree := Tree(path, path_display))
+                tree = Tree(path)
+                tree.calc_path_display(args)
+                trees.append(tree)
             elif tree:
                 if field == 'HEAD':
                     tree.head = value[:HASH_LEN]
@@ -354,7 +358,8 @@ class Trees:
         else:
             validate_name(name)
 
-        if '{worktree}' not in (pathstr := self.args.path):
+        args = self.args
+        if '{worktree}' not in (pathstr := args.path):
             sys.exit(
                 f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
             )
@@ -375,20 +380,21 @@ class Trees:
         path = (self.toplevel.path / path).resolve()
 
         if path.exists():
-            sys.exit(f'error: worktree path "{relpath(path)}" already exists.')
+            dpath = path_as_displayed(path, args)
+            sys.exit(f'error: worktree path "{dpath}" already exists.')
 
         cmd = ['git', 'worktree', 'add', str(path)]
-        if self.args.detach:
+        if args.detach:
             cmd.append('--detach')
         else:
             if name not in branches:
                 cmd.append('-b')
             cmd.append(name)
 
-        run(cmd, stdout=self.args._stdout)
+        run(cmd, stdout=args._stdout)
         return path
 
-    def remove_worktree(self, name: str, tree: Tree | None = None) -> Path | None:
+    def remove_worktree(self, name: str, tree: Tree | None) -> Path | None:
         "Remove the worktree and branch with the given name"
         if not tree and not (tree := self.get_tree(name)):
             sys.exit(f'error: no worktree found with name "{name}".')
@@ -400,32 +406,33 @@ class Trees:
             )
             return None
 
+        args = self.args
         if tree == self.current:
             # Change to the top-level worktree directory before deleting this worktree
             # because we are removing the current directory
             os.chdir(newpath := self.toplevel.path)
 
-            # Recompute the relative path to the worktree from the new current directory
-            if self.args.relative:
-                tree.path_display = relpath(tree.path)
+            # Recompute the displayed (possibly relative) path to the worktree
+            # from the new current directory
+            tree.calc_path_display(args)
         else:
             newpath = None
 
         cmd = ['git', 'worktree', 'remove']
-        if self.args.force:
+        if args.force:
             cmd.append('--force')
 
         cmd.append(str(tree.path))
-        run(cmd, stdout=self.args._stdout)
+        run(cmd, stdout=args._stdout)
 
-        print(f'Removed worktree "{tree.path_display}"', file=self.args._stdout)
+        print(f'Removed worktree "{tree.path_display}"', file=args._stdout)
 
         # Also remove parent directories of the worktree if they are empty
         rm_parents(tree.path)
 
-        if tree.branch and not self.args.keep_branch:
-            cmd = ('git', 'branch', '-D' if self.args.force else '-d', tree.branch)
-            run(cmd, stdout=self.args._stdout, ignore_error=True)
+        if tree.branch and not args.keep_branch:
+            cmd = ('git', 'branch', '-D' if args.force else '-d', tree.branch)
+            run(cmd, stdout=args._stdout, ignore_error=True)
 
         return newpath
 
