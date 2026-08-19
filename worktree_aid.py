@@ -13,7 +13,7 @@ from argparse import SUPPRESS, ArgumentParser, Namespace
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 PROG = Path(__file__).stem.replace('_', '-')
 HOME = Path.home()
@@ -53,6 +53,9 @@ SHELLCODE = """
 }
 """
 
+# List of internal command classes, populated by @Command decorator
+commands = []
+
 
 def init_code(cmd: str) -> str:
     "Return shell init code as string"
@@ -89,10 +92,7 @@ def run(
     if not ignore_error and res.returncode != 0:
         sys.exit(res.returncode)
 
-    if capture:
-        return res.stdout.strip()
-
-    return ''
+    return res.stdout.strip() if capture else ''
 
 
 def get_title(desc: str, name: str) -> str:
@@ -104,7 +104,7 @@ def get_title(desc: str, name: str) -> str:
         if line.endswith('.'):
             return ' '.join(res)
 
-    sys.exit(f'Mwoust end {name} command description with a full stop.')
+    sys.exit(f'Must end {name} command description with a full stop.')
 
 
 def unexpanduser(path: Path) -> Path:
@@ -117,7 +117,6 @@ def unexpanduser(path: Path) -> Path:
 
 def path_as_displayed(path: Path, args: Namespace) -> str:
     "Return displayed path"
-
     if args.relative:
         return os.path.relpath(path)
     elif not args.no_user:
@@ -159,8 +158,8 @@ def print_help(args: Namespace) -> None:
 
 def validate_name(name: str) -> None:
     "Ensure worktree name is valid"
-    if ' ' in name:
-        sys.exit(f'error: worktree name "{name}" can not contain spaces.')
+    if ' ' in name or '\t' in name:
+        sys.exit(f'error: worktree name "{name}" can not contain spaces or tabs.')
 
     if '\\' in name:
         sys.exit(f'error: worktree name "{name}" can not contain "\\".')
@@ -254,10 +253,7 @@ class Trees:
         cwdparts = Path.cwd().resolve().parts
         phere = pindex = -1
         for line in run(('git', 'worktree', 'list', '--porcelain')).splitlines():
-            if not (line := line.strip()):
-                continue
-
-            if len(fields := line.split(maxsplit=1)) < 2:
+            if not (line := line.strip()) or len(fields := line.split(maxsplit=1)) < 2:
                 continue
 
             field, value = fields
@@ -344,7 +340,6 @@ class Trees:
 
     def create_worktree(self, name: str) -> Path:
         "Create a new worktree and branch with the given name"
-
         # Get set of existing branch names
         blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
         branches = {b.split(maxsplit=1)[-1] for b in blist}
@@ -364,12 +359,10 @@ class Trees:
                 f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
             )
 
-        worktree = name.replace('/', '-')
-
         try:
             pathstr = pathstr.format(
                 repo=self.toplevel.path.name,
-                worktree=worktree,
+                worktree=name.replace('/', '-'),
                 user=getpass.getuser(),
                 home=str(HOME),
             )
@@ -437,15 +430,6 @@ class Trees:
         return newpath
 
 
-class Command:
-    commands: ClassVar = []
-
-    @classmethod
-    def add(cls, command: Any) -> None:
-        "Add command class to list of commands"
-        cls.commands.append(command)
-
-
 def main() -> int:
     "Main code"
     # Main returns a status code:
@@ -503,7 +487,7 @@ def main() -> int:
     cmd = opt.add_subparsers(title='Commands')
 
     # Add each command ..
-    for cls in Command.commands:
+    for cls in commands:
         name = cls.__name__
 
         if hasattr(cls, 'doc'):
@@ -567,7 +551,12 @@ def main() -> int:
     return shell_return
 
 
-@Command.add
+def Command(command: type) -> None:
+    "Decorator to add given command class to list of commands"
+    commands.append(command)
+
+
+@Command
 class add:
     "Add new worktree + branch."
 
@@ -603,7 +592,7 @@ class add:
         return str(retpath) if retpath and not args.no_cd else None
 
 
-@Command.add
+@Command
 class rm:
     "Remove worktree + branch."
 
@@ -665,7 +654,7 @@ class rm:
         return str(retpath) if retpath else None
 
 
-@Command.add
+@Command
 class cd:
     "Change worktree directory."
 
@@ -686,7 +675,7 @@ class cd:
         return str(tree.path) if tree else None
 
 
-@Command.add
+@Command
 class fetch:
     "Fetch changes from another worktree."
 
@@ -713,7 +702,7 @@ class fetch:
         )
 
     @staticmethod
-    def run(args: Namespace) -> str | None:
+    def run(args: Namespace) -> None:
         trees = Trees(args)
         if tree := trees.get_or_ask_tree(args.worktree):
             srcpath = tree.path
@@ -723,23 +712,19 @@ class fetch:
             stdout = None if args.quiet else args._stdout
             copyfiles(srcpath, tgtpath, stdout, args)
 
-        return None
 
-
-@Command.add
+@Command
 class ls:
     "List worktrees."
 
     @staticmethod
-    def run(args: Namespace) -> str | None:
+    def run(args: Namespace) -> None:
         trees = Trees(args)
         for line in reversed(trees.get_trees()):
             print(line, file=args._stdout)
 
-        return None
 
-
-@Command.add
+@Command
 class init:
     doc = f"""
     Output shell initialization code and set default options.
@@ -759,7 +744,7 @@ class init:
         )
 
     @staticmethod
-    def run(args: Namespace) -> str | None:
+    def run(args: Namespace) -> str:
         if args._:
             sys.exit(
                 f'Must invoke using "{PROG}", not shell function, to output shell initialization code.'
