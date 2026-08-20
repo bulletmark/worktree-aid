@@ -633,7 +633,7 @@ class rm:
 
         if args.all:
             if args.worktree:
-                sys.exit('error: cannot specify a worktree name with --all option.')
+                sys.exit('error: cannot specify a worktree name with -a/--all option.')
 
             deltrees = [t for t in trees.trees if t != trees.toplevel]
         elif not args.worktree:
