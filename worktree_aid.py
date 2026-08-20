@@ -168,6 +168,12 @@ def validate_name(name: str) -> None:
         sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
 
 
+def get_branches() -> set[str]:
+    "Return set of existing branch names"
+    blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
+    return {b.split(maxsplit=1)[-1] for b in blist}
+
+
 def copyfile(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
     "Copy a file from src worktree to target worktree"
     if src.exists() or src.is_symlink():
@@ -299,23 +305,23 @@ class Trees:
 
     def get_tree(self, name: str) -> Tree | None:
         "Return worktree with given name, or None if not found"
+        # Check for shortcut to top-level worktree
         if name == '/':
-            # Shortcut to top-level worktree
-            tree = self.toplevel
-        elif name == '.':
-            # Shortcut to current worktree
-            tree = self.current
-        else:
-            tree = None
-            for t in self.trees:
-                if t.branch == name:
-                    tree = t
-                    break
+            return self.toplevel
 
-                if t.path.name == name:
-                    tree = t
+        # Check for shortcut to current worktree
+        if name == '.':
+            return self.current
 
-        return tree
+        for tree in self.trees:
+            if tree.branch == name:
+                return tree
+
+        for tree in self.trees:
+            if tree.path.name == name:
+                return tree
+
+        return None
 
     def prompt(self) -> Tree | None:
         "Prompt user to select a worktree using fuzzy finder"
@@ -340,14 +346,13 @@ class Trees:
 
     def create_worktree(self, name: str) -> Path:
         "Create a new worktree and branch with the given name"
-        # Get set of existing branch names
-        blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
-        branches = {b.split(maxsplit=1)[-1] for b in blist}
+        branches = get_branches()
 
         if not name:
             # If no name is given, generate a new name that does not conflict
             # with existing worktrees or branches
             excludes = {t.path.name for t in self.trees} | branches
+            excludes.update(t.path.parent.name for t in self.trees)
             excludes.update(b.split('/', maxsplit=1)[0] for b in branches if '/' in b)
             name = generate_new_name(excludes)
         else:
@@ -387,11 +392,8 @@ class Trees:
         run(cmd, stdout=args._stdout)
         return path
 
-    def remove_worktree(self, name: str, tree: Tree | None) -> Path | None:
-        "Remove the worktree and branch with the given name"
-        if not tree and not (tree := self.get_tree(name)):
-            sys.exit(f'error: no worktree found with name "{name}".')
-
+    def remove_worktree(self, tree: Tree) -> Path | None:
+        "Remove the given worktree and branch"
         if tree == self.toplevel:
             print(
                 f'warning: not removing top-level worktree "{tree.path}"',
@@ -633,23 +635,23 @@ class rm:
             if args.worktree:
                 sys.exit('error: cannot specify a worktree name with --all option.')
 
-            names = [
-                n for t in trees.trees if t != trees.toplevel and (n := t.path.name)
-            ]
+            deltrees = [t for t in trees.trees if t != trees.toplevel]
+        elif not args.worktree:
+            if not (tree := trees.prompt()):
+                return None
+            deltrees = [tree]
         else:
-            names = args.worktree or ['']
+            deltrees = []
+            for name in args.worktree:
+                if not (tree := trees.get_tree(name)):
+                    sys.exit(f'error: no worktree found with name "{name}".')
+
+                deltrees.append(tree)
 
         retpath = None
-        tree = None
-        for name in names:
-            # If no worktree name is given, prompt user to select one
-            if not name and not (tree := trees.prompt()):
-                return None
-
-            if (path := trees.remove_worktree(name, tree)) and not retpath:
+        for tree in deltrees:
+            if (path := trees.remove_worktree(tree)) and not retpath:
                 retpath = path
-
-            tree = None
 
         return str(retpath) if retpath else None
 
