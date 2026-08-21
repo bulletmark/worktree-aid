@@ -441,6 +441,11 @@ def main() -> int:
     #     will silently quit and return that error code.
     # 2 = Caller will silently quit and return exit code 0.
 
+    # Python 3.14 has a color bug so override auto-detection, see
+    # https://github.com/python/cpython/issues/156144
+    if sys.version_info[:2] == (3, 14):
+        os.environ['FORCE_COLOR'] = '1'
+
     # Parse arguments
     opt = ArgumentParser(description=__doc__, add_help=False)
     opt.add_argument(
