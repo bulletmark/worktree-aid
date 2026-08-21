@@ -512,6 +512,8 @@ def main() -> int:
 
     args = opt.parse_args()
     args._opt = opt
+
+    # Work out the state of the toggle options
     args.relative &= 1
     args.no_user &= 1
 
