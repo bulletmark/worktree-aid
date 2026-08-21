@@ -443,7 +443,7 @@ def main() -> int:
 
     # Python 3.14 has a color bug so override auto-detection, see
     # https://github.com/python/cpython/issues/156144
-    if sys.version_info[:2] == (3, 14):
+    if sys.version_info[:2] == (3, 14) and 'FORCE_COLOR' not in os.environ:
         os.environ['FORCE_COLOR'] = '1'
 
     # Parse arguments
