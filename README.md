@@ -39,7 +39,7 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [-P PATH] [-R] [-r] [-U] [-u] [-F FUZZY] [-V] [-h]
+usage: wt [-P PATH] [-r] [-u] [-F FUZZY] [-V] [-h]
                     {add,a,rm,r,cd,c,fetch,f,ls,l,init,i} ...
 
 Command line tool to easily add, remove, and change directories for git
@@ -50,10 +50,12 @@ options:
                         default="../worktrees/{repo}/{worktree}". Can use
                         {worktree}, {repo}, {user}, and {home} placeholders.
                         Must contain {worktree} at least.
-  -R, --relative        display worktree paths relative instead of absolute
-  -r                    toggle -R/--relative option for one-off command only
-  -U, --no-user         do not substitute "~" for user home directory
-  -u                    toggle -U/--no-user option for one-off command only
+  -r, --relative        toggle absolute/relative display of worktree paths,
+                        default is absolute. Can be specified on command line
+                        again to toggle your default setting.
+  -u, --no-user         toggle substitution of "~" for user home directory,
+                        default is to substitute. Can be specified on command
+                        line again to toggle your default setting.
   -F, --fuzzy FUZZY     fuzzy finder program, default="fzf"
   -V, --version         show program version and exit
   -h, --help            show help message and exit
@@ -174,7 +176,7 @@ Output shell initialization code and set default options. Must be invoked
 using `source <(worktree-aid init)` in your shell `~/.bashrc` or `~/.zshrc`
 initialization file to create the shell alias/function by which you invoke
 this program. You can also append preferred default options to the command
-name, e.g. `source <(worktree-aid init "wt -R")`.
+name, e.g. `source <(worktree-aid init "wt -r")`.
 
 positional arguments:
   command     alternative command name, and optional default arguments,
@@ -247,14 +249,14 @@ You can also set default `worktree-aid` options by appending options in the shel
 initialization code, e.g:
 
 ```sh
-source <(worktree-aid init "wt -R")
+source <(worktree-aid init "wt -r")
 ```
 
-The above sets `-R` (for relative display of worktree directories) as default
+The above sets `-r` (for relative display of worktree directories) as default
 for your `wt` command.
 
 The following options are sensible candidates to set as default options:
-`-P/--path`, `-R/--relative`, `-U/--no-user`, `-F/--fuzzy`.
+`-P/--path`, `-r/--relative`, `-u/--no-user`, `-F/--fuzzy`.
 
 ## Directory Path Template for new Worktree Creation
 
@@ -294,7 +296,7 @@ worktrees so will work regardless of how or where the worktrees were created.
 The `git worktree list` command displays absolute directory paths, and
 `worktree-aid` does also by default, but many users prefer them displayed as
 shorter relative paths which `git worktree` does not provide. You
-can enable it in `worktree-aid` however, by adding the `-R/--relative` option,
+can enable it in `worktree-aid` however, by adding the `-r/--relative` option,
 e.g:
 
 ```sh
@@ -305,9 +307,9 @@ $ wt l
                                       f76b8e0 [main]
 ```
 
-Most likely you will want to set `-R` as a [default option](#default-options).
-Note you can use the `-r` option on a one-off command to temporarily toggle
-whatever your default `-R/--relative` option is set as.
+Most likely you will want to set `-r` as a [default option](#default-options).
+Note you can use the `-r` option again on a one-off command to temporarily
+toggle whatever your default `-r/--relative` option is set as.
 
 ## Fuzzy Finder Integration
 

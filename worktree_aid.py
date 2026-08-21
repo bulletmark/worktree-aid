@@ -452,26 +452,20 @@ def main() -> int:
         'Must contain {worktree} at least.',
     )
     opt.add_argument(
-        '-R',
-        '--relative',
-        action='store_true',
-        help='display worktree paths relative instead of absolute',
-    )
-    opt.add_argument(
         '-r',
-        action='store_true',
-        help='toggle -R/--relative option for one-off command only',
-    )
-    opt.add_argument(
-        '-U',
-        '--no-user',
-        action='store_true',
-        help='do not substitute "~" for user home directory',
+        '--relative',
+        action='count',
+        default=0,
+        help='toggle absolute/relative display of worktree paths, default is absolute. '
+        'Can be specified on command line again to toggle your default setting.',
     )
     opt.add_argument(
         '-u',
-        action='store_true',
-        help='toggle -U/--no-user option for one-off command only',
+        '--no-user',
+        action='count',
+        default=0,
+        help='toggle substitution of "~" for user home directory, default is to substitute. '
+        'Can be specified on command line again to toggle your default setting.',
     )
     opt.add_argument(
         '-F',
@@ -518,12 +512,8 @@ def main() -> int:
 
     args = opt.parse_args()
     args._opt = opt
-
-    if args.r:
-        args.relative = not args.relative
-
-    if args.u:
-        args.no_user = not args.no_user
+    args.relative &= 1
+    args.no_user &= 1
 
     # Note that '_' is a hidden option and only set when this program is
     # invoked from the shell function
@@ -733,7 +723,7 @@ class init:
     Must be invoked using `source <({PROG} init)` in your shell `~/.bashrc` or
     `~/.zshrc` initialization file to create the shell alias/function by which
     you invoke this program. You can also append preferred default options to
-    the command name, e.g. `source <({PROG} init \"wt -R\")`.
+    the command name, e.g. `source <({PROG} init \"wt -r\")`.
     """
 
     @staticmethod
