@@ -27,9 +27,10 @@ use to manage git worktrees. There are 3 commonly used commands:
   remove. If you remove the current worktree then you will be automatically cd'd
   to the top-level repository directory.
 
-There are some other options and commands available, as described in the next
-section. Type `wt` to see an overall help/usage summary, or `wt <command> -h`
-to see specific help/usage for any individual command.
+There are some other less commonly used options and commands available, as
+described in the following sections. Type `wt` to see an overall help/usage
+summary, or `wt <command> -h` to see specific help/usage for any individual
+command.
 
 The project homepage and latest documentation is at
 https://github.com/bulletmark/worktree-aid.

@@ -9,13 +9,14 @@ import shlex
 import shutil
 import subprocess
 import sys
-from argparse import SUPPRESS, ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 PROG = Path(__file__).stem.replace('_', '-')
+ENVVAR = '_' + PROG.replace('-', '_').upper()
 HOME = Path.home()
 HASH_LEN = 7
 
@@ -38,8 +39,9 @@ PATH = '../worktrees/{repo}/{worktree}'
 # Template for the shell code injected into user's shell session
 SHELLCODE = """
 !cmd() {
-    local d
-    d=$(!prog -_ "$@")
+    local !envvar=""
+    export !envvar
+    !envvar=$(!prog "$@")
     local r=$?
 
     if [ $r -ne 0 ]; then
@@ -49,7 +51,7 @@ SHELLCODE = """
         return $r
     fi
 
-    cd -- "$d"
+    cd -- "$!envvar"
 }
 """
 
@@ -72,7 +74,7 @@ def init_code(cmd: str) -> str:
         cmd, opts = arglist
         prog += f' {opts}'
 
-    return CTemplate(SHELLCODE.strip()).substitute(cmd=cmd, prog=prog)
+    return CTemplate(SHELLCODE.strip()).substitute(envvar=ENVVAR, cmd=cmd, prog=prog)
 
 
 def run(
@@ -441,9 +443,11 @@ def main() -> int:
     #     will silently quit and return that error code.
     # 2 = Caller will silently quit and return exit code 0.
 
-    # Python 3.14 has a color bug so override auto-detection, see
-    # https://github.com/python/cpython/issues/156144
-    if sys.version_info[:2] == (3, 14) and 'FORCE_COLOR' not in os.environ:
+    # We need to determine if we are running in a shell function.
+    # Also, Python 3.14 added color help/usage output but has a bug when
+    # outputting to a device other than stdout, so we override auto-detection.
+    # See https://github.com/python/cpython/issues/156144
+    if (running_in_shell := ENVVAR in os.environ) and sys.version_info[:2] == (3, 14):
         os.environ['FORCE_COLOR'] = '1'
 
     # Parse arguments
@@ -484,7 +488,6 @@ def main() -> int:
     opt.add_argument(
         '-h', '--help', action='store_true', help='show help message and exit'
     )
-    opt.add_argument('-_', action='store_true', help=SUPPRESS)
     cmd = opt.add_subparsers(title='Commands')
 
     # Add each command ..
@@ -517,14 +520,13 @@ def main() -> int:
 
     args = opt.parse_args()
     args._opt = opt
+    args._running_in_shell = running_in_shell
 
     # Work out the state of the toggle options
     args.relative &= 1
     args.no_user &= 1
 
-    # Note that '_' is a hidden option and only set when this program is
-    # invoked from the shell function
-    if args._:
+    if running_in_shell:
         try:
             args._stdout = open('/dev/tty', 'w')
         except Exception as e:
@@ -544,7 +546,7 @@ def main() -> int:
         shell_return = 0
 
     # Code checkers like us to explicitly close files we open
-    if args._:
+    if running_in_shell:
         args._stdout.close()
 
     return shell_return
@@ -744,7 +746,7 @@ class init:
 
     @staticmethod
     def run(args: Namespace) -> str:
-        if args._:
+        if args._running_in_shell:
             sys.exit(
                 f'Must invoke using "{PROG}", not shell function, to output shell initialization code.'
             )
