@@ -6,7 +6,6 @@ worktrees. Prompts user with list of worktrees using fuzzy finder.
 import getpass
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
@@ -174,51 +173,6 @@ def get_branches() -> set[str]:
     "Return set of existing branch names"
     blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
     return {b.split(maxsplit=1)[-1] for b in blist}
-
-
-def copyfile(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
-    "Copy a file from src worktree to target worktree"
-    if src.exists() or src.is_symlink():
-        if stdout:
-            sfile = path_as_displayed(src, args)
-            tfile = path_as_displayed(tgt, args)
-            print(f'Copying "{sfile}" to "{tfile}"', file=stdout)
-
-        if tgt.is_dir() and not tgt.is_symlink():
-            shutil.rmtree(tgt)
-
-        tgt.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, tgt, follow_symlinks=False)
-    elif tgt.is_symlink() or tgt.exists():
-        if stdout:
-            tfile = path_as_displayed(tgt, args)
-            print(f'Removing "{tfile}"', file=stdout)
-
-        if tgt.is_dir() and not tgt.is_symlink():
-            shutil.rmtree(tgt)
-        else:
-            tgt.unlink()
-
-
-def copyfiles(src: Path, tgt: Path, stdout: Any, args: Namespace) -> None:
-    "Copy git changes from src worktree to target worktree"
-    cmd = ['git', '-C', str(src), 'status', '--porcelain']
-    if args.ignored:
-        cmd.extend(['--ignored', '-uall'])
-
-    for line in run(cmd).splitlines():
-        if not (line := line.strip()):
-            continue
-
-        status, rest = line.split(maxsplit=1)
-
-        if status in ('R', 'C') and ' -> ' in rest:
-            for file in rest.split(' -> ', maxsplit=1):
-                file = file.strip().strip('"')
-                copyfile(src / file, tgt / file, stdout, args)
-        else:
-            file = rest.strip('"')
-            copyfile(src / file, tgt / file, stdout, args)
 
 
 def rm_parents(path: Path) -> None:
@@ -674,44 +628,6 @@ class cd:
         trees = Trees(args)
         tree = trees.get_or_ask_tree(args.worktree)
         return str(tree.path) if tree else None
-
-
-@Command
-class fetch:
-    "Fetch changes from another worktree."
-
-    @staticmethod
-    def init(parser: ArgumentParser) -> None:
-        parser.add_argument(
-            '-q',
-            '--quiet',
-            action='store_true',
-            help='suppress output of copied files',
-        )
-        parser.add_argument(
-            '-i',
-            '--ignored',
-            action='store_true',
-            help='also copy ignored files',
-        )
-        parser.add_argument(
-            'worktree',
-            default='',
-            nargs='?',
-            help='Worktree name to fetch changes from. "/" is a shortcut to the top-level repository. '
-            'If not specified then fuzzy finder will prompt with a list of worktrees.',
-        )
-
-    @staticmethod
-    def run(args: Namespace) -> None:
-        trees = Trees(args)
-        if tree := trees.get_or_ask_tree(args.worktree):
-            srcpath = tree.path
-            if srcpath.samefile(tgtpath := trees.current.path):
-                sys.exit(f'error: can not fetch from the same worktree "{srcpath}".')
-
-            stdout = None if args.quiet else args._stdout
-            copyfiles(srcpath, tgtpath, stdout, args)
 
 
 @Command

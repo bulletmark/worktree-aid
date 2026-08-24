@@ -41,7 +41,7 @@ Type `wt` or `wt -h` to view the usage summary:
 
 ```
 usage: wt [-P PATH] [-r] [-u] [-F FUZZY] [-V] [-h]
-                    {add,a,rm,r,cd,c,fetch,f,ls,l,init,i} ...
+                    {add,a,rm,r,cd,c,ls,l,init,i} ...
 
 Command line tool to easily add, remove, and change directories for git
 worktrees. Prompts user with list of worktrees using fuzzy finder.
@@ -62,11 +62,10 @@ options:
   -h, --help            show help message and exit
 
 Commands:
-  {add,a,rm,r,cd,c,fetch,f,ls,l,init,i}
+  {add,a,rm,r,cd,c,ls,l,init,i}
     add (a)             Add new worktree + branch.
     rm (r)              Remove worktree + branch.
     cd (c)              Change worktree directory.
-    fetch (f)           Fetch changes from another worktree.
     ls (l)              List worktrees.
     init (i)            Output shell initialization code and set default
                         options.
@@ -133,26 +132,6 @@ options:
   -h, --help  show help message and exit
 
 aliases: c
-```
-
-### Command `fetch`
-
-```
-usage: wt fetch [-q] [-i] [-h] [worktree]
-
-Fetch changes from another worktree.
-
-positional arguments:
-  worktree       Worktree name to fetch changes from. "/" is a shortcut to the
-                 top-level repository. If not specified then fuzzy finder will
-                 prompt with a list of worktrees.
-
-options:
-  -q, --quiet    suppress output of copied files
-  -i, --ignored  also copy ignored files
-  -h, --help     show help message and exit
-
-aliases: f
 ```
 
 ### Command `ls`
@@ -326,6 +305,23 @@ source <(worktree-aid init "wt -F sk")
 
 You can also get fancy and add preview options etc to your fuzzy finder command line.
 Most likely you will want to set `-F` as a [default option](#default-options).
+
+## Moving or Copying Changes to Another Worktree
+
+This program originally included a `fetch` command to copy changes from one
+worktree to another. However `fetch` has been removed because it is more
+flexible and essentially as easy to do using ordinary git commands.
+
+E.g. A common situation is when you have made changes to files in your main repo
+and you decide to move all your working + new untracked files to a new
+worktree/branch. So just stash your changes, add the new feature branch
+worktree, and then pop the stash in that new worktree:
+
+```sh
+$ git stash -u
+$ wt a my-feature-branch
+$ git stash pop
+```
 
 ## License
 
