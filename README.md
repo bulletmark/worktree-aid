@@ -312,10 +312,10 @@ This program originally included a `fetch` command to copy changes from one
 worktree to another. However `fetch` has been removed because it is more
 flexible and essentially as easy to do using ordinary git commands.
 
-E.g. A common situation is when you have made changes to files in your main repo
-and you decide to move all your working + new untracked files to a new
-worktree/branch. So just stash your changes, add the new feature branch
-worktree, and then pop the stash in that new worktree:
+E.g. A common situation is when you have been working within your main repo and
+you decide to move all your tracked and untracked file changes to a new feature
+branch in a worktree. So just stash your changes, add the new worktree, and then
+pop the stash in that new worktree:
 
 ```sh
 $ git stash -u
