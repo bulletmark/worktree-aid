@@ -304,15 +304,15 @@ class Trees:
         "Create a new worktree and branch with the given name"
         branches = get_branches()
 
-        if not name:
+        if name:
+            validate_name(name)
+        else:
             # If no name is given, generate a new name that does not conflict
             # with existing worktrees or branches
             excludes = {t.path.name for t in self.trees} | branches
-            excludes.update(t.path.parent.name for t in self.trees)
+            excludes.update(n for t in self.trees if (n := t.path.parent.name))
             excludes.update(b.split('/', maxsplit=1)[0] for b in branches if '/' in b)
             name = generate_new_name(excludes)
-        else:
-            validate_name(name)
 
         args = self.args
         if '{worktree}' not in (pathstr := args.path):
