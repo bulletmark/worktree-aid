@@ -199,10 +199,10 @@ instructions for possible alternatives.
 ## Setup
 
 A user who wants to use `worktree-aid` must add the following line to their
-`~/.bashrc` (`bash` user) or `~/.zshrc` (`zsh` user). Ensure it is added
-after where your PATH is set up so that the command `worktree-aid` can be
-found. This creates the `wt` wrapper command in your interactive shell session
-as a tiny function.
+`~/.bashrc` (`bash` user) or `~/.zshrc` (`zsh` user). Ensure it is added after
+where your PATH is set up so that the command `worktree-aid` can be found (or
+specify the full path to `worktree-aid`). This creates the `wt` wrapper command
+in your interactive shell session as a tiny function.
 
 ```sh
 source <(worktree-aid init)
@@ -277,10 +277,9 @@ worktrees so will work regardless of how or where the worktrees were created.
 ## Display as Relative Worktree Directories
 
 The `git worktree list` command displays absolute directory paths, and
-`worktree-aid` does also by default, but many users prefer them displayed as
-shorter relative paths which `git worktree` does not provide. You
-can enable it in `worktree-aid` however, by adding the `-r/--relative` option,
-e.g:
+`worktree-aid` does also by default, but you may prefer to display them as
+relative paths which `git worktree` does not provide. You can enable it in
+`worktree-aid` however, by adding the `-r/--relative` option, e.g:
 
 ```sh
 $ wt l
