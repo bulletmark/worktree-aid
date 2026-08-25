@@ -247,7 +247,7 @@ class Trees:
 
         self.trees = trees
         self.current = trees[0]
-        self.args = args
+        self.fuzzy = args.fuzzy
 
     def get_trees(self) -> list[str]:
         "Fetch string list of worktrees"
@@ -283,7 +283,7 @@ class Trees:
         "Prompt user to select a worktree using fuzzy finder"
         if not (trees := self.get_trees()):
             sys.exit('error: no worktrees to remove.')
-        line = run(shlex.split(self.args.fuzzy), stdin='\n'.join(trees)).strip()
+        line = run(shlex.split(self.fuzzy), stdin='\n'.join(trees)).strip()
         if not line or line not in trees:
             return None
 
@@ -300,7 +300,7 @@ class Trees:
 
         return tree
 
-    def create_worktree(self, name: str) -> Path:
+    def create_worktree(self, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
         branches = get_branches()
 
@@ -314,7 +314,6 @@ class Trees:
             excludes.update(b.split('/', maxsplit=1)[0] for b in branches if '/' in b)
             name = generate_new_name(excludes)
 
-        args = self.args
         if '{worktree}' not in (pathstr := args.path):
             sys.exit(
                 f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
@@ -348,7 +347,7 @@ class Trees:
         run(cmd, stdout=args._stdout)
         return path
 
-    def remove_worktree(self, tree: Tree) -> Path | None:
+    def remove_worktree(self, tree: Tree, args: Namespace) -> Path | None:
         "Remove the given worktree and branch"
         if tree == self.toplevel:
             print(
@@ -357,7 +356,6 @@ class Trees:
             )
             return None
 
-        args = self.args
         if tree == self.current:
             # Change to the top-level worktree directory before deleting this worktree
             # because we are removing the current directory
@@ -546,7 +544,7 @@ class add:
         trees = Trees(args)
         retpath = None
         for name in args.worktree or ['']:
-            if (path := trees.create_worktree(name)) and not retpath:
+            if (path := trees.create_worktree(name, args)) and not retpath:
                 retpath = path
 
         return str(retpath) if retpath and not args.no_cd else None
@@ -610,7 +608,7 @@ class rm:
 
         retpath = None
         for tree in deltrees:
-            if (path := trees.remove_worktree(tree)) and not retpath:
+            if (path := trees.remove_worktree(tree, args)) and not retpath:
                 retpath = path
 
         return str(retpath) if retpath else None
