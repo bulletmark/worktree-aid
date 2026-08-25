@@ -2,13 +2,16 @@
 [![PyPi](https://img.shields.io/pypi/v/worktree-aid)](https://pypi.org/project/worktree-aid/)
 [![AUR](https://img.shields.io/aur/version/worktree-aid)](https://aur.archlinux.org/packages/worktree-aid/)
 
-This is a command line tool to easily add, remove, and change directories for
-[git worktrees][gitw]. Prompts user with list of worktrees using [fuzzy
-finder][fzf].
+[Git worktrees][gitw] are a great way to work on multiple branches or copies of
+a [git] repository but are under-appreciated by many perhaps because the
+interface is somewhat cumbersome to use. `worktree-aid` a a command line tool
+to make using [git worktrees][gitw] more convenient. It allows you to easily
+add, remove, and change directories for [git worktrees][gitw]. Users can be
+prompted with list of worktrees using a [fuzzy finder][fzf].
 
 After following the instructions in the [Installation](#installation-or-upgrade)
 and [Setup](#setup) sections below, an `wt` shell command/alias is available to
-use to manage git worktrees. There are 3 commonly used commands:
+use to manage [git worktrees][gitw]. There are 3 commonly used commands:
 
 - `wt add` (or `wt a`) to add a new worktree + branch and automatically cd to
   it. If you don't specify a worktree name, a new unique name will be
@@ -188,7 +191,7 @@ Or, on [Arch Linux][AUR]:
 $ yay -S worktree-aid  # or your preferred AUR helper
 ```
 
-[Git] is required to execute all commands. You also need to install a fuzzy
+[git] is required to execute all commands. You also need to install a fuzzy
 finder program such as [`fzf`][fzf] which is the default used by
 `worktree-aid`. See [fuzzy finder installation](#fuzzy-finder-integration)
 instructions for possible alternatives.
@@ -212,10 +215,10 @@ shell.
 
 You can use an alternative command name instead of the default `wt` if you
 prefer. To do this, simply append your desired command name as the first
-argument to the `worktree-aid init` option in your shell initialization code.
+argument to the `worktree-aid init` line in your shell initialization code.
 
 E.g, to use the command name `wx` rather than the default `wt`, use the
-following in your `~/.bashrc` or `~/.zshrc` file:
+following in your shell `init` line:
 
 ```sh
 source <(worktree-aid init wx)
@@ -225,8 +228,8 @@ Then log out/in, and then use `wx` command instead of the default `wt`.
 
 ## Default Options
 
-You can also set default `worktree-aid` options by appending options in the shell
-initialization code, e.g:
+You can also set default `worktree-aid` options by appending options in your
+shell `init` line, e.g:
 
 ```sh
 source <(worktree-aid init "wt -r")
@@ -297,7 +300,7 @@ toggle whatever your default `-r/--relative` option is set as.
 any of the popular other command line fuzzy search finders such as [`sk`][skim],
 [`tv`][television], or [`fzy`][fzy].
 
-E.g. to use [`sk`][skim], put this in your `~/.bashrc` or `~/.zshrc` file:
+E.g. to use [`sk`][skim], put this in your shell `init` line:
 
 ```sh
 source <(worktree-aid init "wt -F sk")
@@ -338,5 +341,5 @@ GPL-3.0-or-later.
 [television]: https://github.com/alexpasmantier/television
 [Zed]: https://zed.dev/
 [VS Code]: https://code.visualstudio.com/
-[Git]: https://git-scm.com/
+[git]: https://git-scm.com/
 [AUR]: https://aur.archlinux.org/packages/worktree-aid/
