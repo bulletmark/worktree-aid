@@ -456,8 +456,13 @@ def main() -> int:
             sys.exit(f'Must define a docstring for command class "{name}".')
 
         title = get_title(desc, name)
+
+        aliases = [name[0]]
+        if hasattr(cls, 'extra_aliases'):
+            aliases.extend(cls.extra_aliases)
+
         cmdopt = cmd.add_parser(
-            name, description=desc, aliases=name[0], help=title, add_help=False
+            name, description=desc, aliases=aliases, help=title, add_help=False
         )
 
         # Set up this commands own arguments, if it has any
@@ -551,6 +556,8 @@ class add:
 class rm:
     "Remove worktree + branch."
 
+    extra_aliases = ('remove',)
+
     @staticmethod
     def init(parser: ArgumentParser) -> None:
         parser.add_argument(
@@ -633,6 +640,8 @@ class cd:
 @Command
 class ls:
     "List worktrees."
+
+    extra_aliases = ('list',)
 
     @staticmethod
     def run(args: Namespace) -> None:

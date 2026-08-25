@@ -20,12 +20,12 @@ use to manage git worktrees. There are 3 commonly used commands:
   worktree name, then a [fuzzy finder][fzf] will prompt you with a list of
   worktrees to select from and be cd'd to.
 
-- `wt rm` (or `wt r`) to remove a worktree + branch. You can use `.` as a
-  shortcut for the current worktree. If you don't specify a worktree name, then
-  a [fuzzy finder][fzf] will prompt you with a list of worktrees to select from.
-  The current worktree is first in the list and is the default selection to
-  remove. If you remove the current worktree then you will be automatically cd'd
-  to the top-level repository directory.
+- `wt rm` (or `wt r` or `wt remove`) to remove a worktree + branch. You can use
+  `.` as a shortcut for the current worktree. If you don't specify a worktree
+  name, then a [fuzzy finder][fzf] will prompt you with a list of worktrees to
+  select from. The current worktree is first in the list and is the default
+  selection to remove. If you remove the current worktree then you will be
+  automatically cd'd to the top-level repository directory.
 
 There are some other less commonly used options and commands available, as
 described in the following sections. Type `wt` to see an overall help/usage
@@ -41,7 +41,7 @@ Type `wt` or `wt -h` to view the usage summary:
 
 ```
 usage: wt [-P PATH] [-r] [-u] [-F FUZZY] [-V] [-h]
-                    {add,a,rm,r,cd,c,ls,l,init,i} ...
+                    {add,a,rm,r,remove,cd,c,ls,l,list,init,i} ...
 
 Command line tool to easily add, remove, and change directories for git
 worktrees. Prompts user with list of worktrees using fuzzy finder.
@@ -62,11 +62,11 @@ options:
   -h, --help            show help message and exit
 
 Commands:
-  {add,a,rm,r,cd,c,ls,l,init,i}
+  {add,a,rm,r,remove,cd,c,ls,l,list,init,i}
     add (a)             Add new worktree + branch.
-    rm (r)              Remove worktree + branch.
+    rm (r, remove)      Remove worktree + branch.
     cd (c)              Change worktree directory.
-    ls (l)              List worktrees.
+    ls (l, list)        List worktrees.
     init (i)            Output shell initialization code and set default
                         options.
 ```
@@ -113,7 +113,7 @@ options:
   -a, --all          remove all worktrees
   -h, --help         show help message and exit
 
-aliases: r
+aliases: r, remove
 ```
 
 ### Command `cd`
@@ -144,7 +144,7 @@ List worktrees.
 options:
   -h, --help  show help message and exit
 
-aliases: l
+aliases: l, list
 ```
 
 ### Command `init`
