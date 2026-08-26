@@ -218,8 +218,8 @@ class Trees:
         cwdparts = Path.cwd().resolve().parts
         phere = pindex = -1
         hash_len = args.hash_len
-        for line in run(('git', 'worktree', 'list', '--porcelain')).splitlines():
-            if not (line := line.strip()) or len(fields := line.split(maxsplit=1)) < 2:
+        for line in run(('git', 'worktree', 'list', '--porcelain', '-z')).split('\0'):
+            if line and len(fields := line.split(maxsplit=1)) < 2:
                 continue
 
             field, value = fields
