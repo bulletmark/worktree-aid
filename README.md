@@ -43,7 +43,7 @@ https://github.com/bulletmark/worktree-aid.
 Type `wt` or `wt -h` to view the usage summary:
 
 ```
-usage: wt [-P PATH] [-r] [-u] [-F FUZZY] [-V] [-h]
+usage: wt [-P PATH] [-r] [-u] [-F FUZZY] [-H HASH_LEN] [-V] [-h]
                     {add,a,rm,r,remove,cd,c,ls,l,list,init,i} ...
 
 Command line tool to easily add, remove, and change directories for git
@@ -51,7 +51,7 @@ worktrees. Prompts user with list of worktrees using fuzzy finder.
 
 options:
   -P, --path PATH       directory path template for newly added worktrees,
-                        default="../worktrees/{repo}/{worktree}". Can use
+                        default = "../worktrees/{repo}/{worktree}". Can use
                         {worktree}, {repo}, {user}, and {home} placeholders.
                         Must contain {worktree} at least.
   -r, --relative        toggle absolute/relative display of worktree paths,
@@ -60,7 +60,10 @@ options:
   -u, --no-user         toggle substitution of "~" for user home directory,
                         default is to substitute. Can be specified on command
                         line again to toggle your default setting.
-  -F, --fuzzy FUZZY     fuzzy finder program, default="fzf"
+  -F, --fuzzy FUZZY     fuzzy finder program, default = "fzf"
+  -H, --hash-len HASH_LEN
+                        length of git commit hash to display in list, default
+                        = 7, 0 = display full hash, -1 = do not display hash
   -V, --version         show program version and exit
   -h, --help            show help message and exit
 
@@ -163,7 +166,7 @@ name, e.g. `source <(worktree-aid init "wt -r")`.
 
 positional arguments:
   command     alternative command name, and optional default arguments,
-              default="wt"
+              default = "wt"
 
 options:
   -h, --help  show help message and exit
@@ -192,9 +195,9 @@ $ yay -S worktree-aid  # or your preferred AUR helper
 ```
 
 [git] is required to execute all commands. You also need to install a fuzzy
-finder program such as [`fzf`][fzf] which is the default used by
-`worktree-aid`. See [fuzzy finder installation](#fuzzy-finder-integration)
-instructions for possible alternatives.
+finder program such as [`fzf`][fzf] which is the default used by `worktree-aid`.
+See [fuzzy finder installation](#fuzzy-finder-integration) instructions for
+possible alternatives.
 
 ## Setup
 
@@ -295,9 +298,9 @@ toggle whatever your default `-r/--relative` option is set as.
 
 ## Fuzzy Finder Integration
 
-[`fzf`][fzf] is the default fuzzy finder used by `worktree-aid`, but you can use
-any of the popular other command line fuzzy search finders such as [`sk`][skim],
-[`tv`][television], or [`fzy`][fzy].
+[`fzf`][fzf] is by far the most popular command line fuzzy search/finder and is
+the default used by `worktree-aid`. You can however use any other fuzzy finder
+such as [`sk`][skim], [`tv`][television], or [`fzy`][fzy], etc.
 
 E.g. to use [`sk`][skim], put this in your shell `init` line:
 

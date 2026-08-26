@@ -17,11 +17,14 @@ from typing import Any
 PROG = Path(__file__).stem.replace('_', '-')
 ENVVAR = '_' + PROG.replace('-', '_').upper()
 HOME = Path.home()
-HASH_LEN = 7
+
+# Default git commit hash length to display in worktree list. Can be changed
+# using command line option.
+DEF_HASH_LEN = 7
 
 # Default command name (shell function) this program is installed as. Can be
 # changed using command line option.
-DEFCMD = 'wt'
+DEF_CMD = 'wt'
 
 # Default fuzzy finder. Can be changed using command line option.
 DEFAULT_FUZZY = 'fzf'
@@ -197,7 +200,7 @@ class Tree:
 
     path: Path
     path_display: str = ''
-    head: str = ' ' * HASH_LEN
+    head: str = ''
     branch: str = ''
 
     def calc_path_display(self, args: Namespace):
@@ -214,6 +217,7 @@ class Trees:
         tree = None
         cwdparts = Path.cwd().resolve().parts
         phere = pindex = -1
+        hash_len = args.hash_len
         for line in run(('git', 'worktree', 'list', '--porcelain')).splitlines():
             if not (line := line.strip()) or len(fields := line.split(maxsplit=1)) < 2:
                 continue
@@ -232,7 +236,10 @@ class Trees:
                 trees.append(tree)
             elif tree:
                 if field == 'HEAD':
-                    tree.head = value[:HASH_LEN]
+                    if hash_len >= 0:
+                        if hash_len == 0:
+                            hash_len = len(value)
+                        tree.head = value[:hash_len]
                 elif field == 'branch':
                     tree.branch = value.split('/', maxsplit=2)[-1]
 
@@ -248,14 +255,19 @@ class Trees:
         self.trees = trees
         self.current = trees[0]
         self.fuzzy = args.fuzzy
+        self.hash_len = hash_len
 
     def get_trees(self) -> list[str]:
         "Fetch string list of worktrees"
+        hash_len = self.hash_len
         width = max(len(t.path_display) for t in self.trees)
         trees = []
         for t in self.trees:
-            branch = f'[{t.branch}]' if t.branch else 'detached'
-            trees.append(f'{t.path_display:{width}} {t.head} {branch}')
+            line = [f'{t.path_display:{width}}']
+            if hash_len > 0:
+                line.append(f'{t.head:{hash_len}}')
+            line.append(f'[{t.branch}]' if t.branch else 'detached')
+            trees.append(' '.join(line))
 
         return trees
 
@@ -408,7 +420,7 @@ def main() -> int:
         '-P',
         '--path',
         default=PATH,
-        help='directory path template for newly added worktrees, default="%(default)s". '
+        help='directory path template for newly added worktrees, default = "%(default)s". '
         'Can use {worktree}, {repo}, {user}, and {home} placeholders. '
         'Must contain {worktree} at least.',
     )
@@ -432,7 +444,15 @@ def main() -> int:
         '-F',
         '--fuzzy',
         default=DEFAULT_FUZZY,
-        help='fuzzy finder program, default="%(default)s"',
+        help='fuzzy finder program, default = "%(default)s"',
+    )
+    opt.add_argument(
+        '-H',
+        '--hash-len',
+        type=int,
+        default=DEF_HASH_LEN,
+        help='length of git commit hash to display in list, default = %(default)d, '
+        '0 = display full hash, -1 = do not display hash',
     )
     opt.add_argument(
         '-V', '--version', action='store_true', help='show program version and exit'
@@ -663,8 +683,8 @@ class init:
         parser.add_argument(
             'command',
             nargs='?',
-            default=DEFCMD,
-            help='alternative command name, and optional default arguments, default="%(default)s"',
+            default=DEF_CMD,
+            help='alternative command name, and optional default arguments, default = "%(default)s"',
         )
 
     @staticmethod
