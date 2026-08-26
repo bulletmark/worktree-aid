@@ -38,16 +38,18 @@ DEFAULT_FUZZY = 'fzf'
 # {home} = current user home directory
 PATH = '../worktrees/{repo}/{worktree}'
 
+QUIET_RETURN = 3  # Return code to indicate quiet exit from shell function
+
 # Template for the shell code injected into user's shell session
 SHELLCODE = """
 !cmd() {
     local !envvar=""
     export !envvar
-    !envvar=$(!prog "$@")
+    !envvar=$("!prog"!args "$@")
     local r=$?
 
     if [ $r -ne 0 ]; then
-        if [ $r -eq 2 ]; then
+        if [ $r -eq !QUIET_RETURN ]; then
             return 0
         fi
         return $r
@@ -70,13 +72,16 @@ def init_code(cmd: str) -> str:
     class CTemplate(Template):
         delimiter = '!'
 
-    prog = sys.argv[0]
     arglist = cmd.split(maxsplit=1)
     if len(arglist) > 1:
         cmd, opts = arglist
-        prog += f' {opts}'
+        args = f' {opts}'
+    else:
+        args = ''
 
-    return CTemplate(SHELLCODE.strip()).substitute(envvar=ENVVAR, cmd=cmd, prog=prog)
+    return CTemplate(SHELLCODE.strip()).substitute(
+        envvar=ENVVAR, cmd=cmd, prog=sys.argv[0], args=args, QUIET_RETURN=QUIET_RETURN
+    )
 
 
 def run(
@@ -405,7 +410,9 @@ def main() -> int:
     #     worktree directory and return error code for that cd command result.
     # 1 = Error/message already written to stderr via sys.exit(). Calling script
     #     will silently quit and return that error code.
-    # 2 = Caller will silently quit and return exit code 0.
+    # 2 = Error/message already written to stderr from argparse. Calling script
+    #     will silently quit and return that error code.
+    # QUIET_RETURN = Caller will silently quit and return exit code 0.
 
     # We need to determine if we are running in a shell function.
     # Also, Python 3.14 added color help/usage output but has a bug when
@@ -509,7 +516,7 @@ def main() -> int:
         except Exception as e:
             sys.exit(f'error: can not write to terminal in shell function mode: {e}')
 
-        shell_return = 2
+        shell_return = QUIET_RETURN
     else:
         args._stdout = sys.stdout
         shell_return = 0
