@@ -134,12 +134,12 @@ def path_as_displayed(path: Path, args: Namespace) -> str:
     return str(path)
 
 
-def generate_new_name(exists: set[str]) -> str:
+def generate_new_name(excludes: set[str]) -> str:
     "Generate a new worktree name"
     from coolname import generate_slug
 
-    for _ in range(100 + len(exists)):
-        if (name := generate_slug(2)) not in exists:
+    for _ in range(100 + len(excludes)):
+        if (name := generate_slug(2)) not in excludes:
             return name
 
     sys.exit('error: failed to generate a new worktree name.')
@@ -179,8 +179,11 @@ def validate_name(name: str) -> None:
 
 def get_branches() -> set[str]:
     "Return set of existing branch names"
-    blist = run(('git', '--no-pager', 'branch', '--list')).splitlines()
-    return {b.split(maxsplit=1)[-1] for b in blist}
+    blist = run(
+        ('git', '--no-pager', 'branch', '-al', r'--format=%(refname:short)')
+    ).splitlines()
+    branches = {b.strip() for b in blist}
+    return branches | {b.rsplit('/', 1)[-1] for b in branches if '/' in b}
 
 
 def rm_parents(path: Path) -> None:
@@ -323,6 +326,11 @@ class Trees:
 
     def create_worktree(self, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
+        if '{worktree}' not in (pathstr := args.path):
+            sys.exit(
+                f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
+            )
+
         branches = get_branches()
 
         if name:
@@ -332,13 +340,8 @@ class Trees:
             # with existing worktrees or branches
             excludes = {t.path.name for t in self.trees} | branches
             excludes.update(n for t in self.trees if (n := t.path.parent.name))
-            excludes.update(b.split('/', maxsplit=1)[0] for b in branches if '/' in b)
+            excludes.update(p for b in branches if '/' in b for p in b.split('/'))
             name = generate_new_name(excludes)
-
-        if '{worktree}' not in (pathstr := args.path):
-            sys.exit(
-                f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
-            )
 
         try:
             pathstr = pathstr.format(
