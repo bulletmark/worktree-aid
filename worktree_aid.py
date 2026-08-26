@@ -101,7 +101,7 @@ def run(
     if not ignore_error and res.returncode != 0:
         sys.exit(res.returncode)
 
-    return res.stdout.strip() if capture else ''
+    return res.stdout.strip() if capture and res.stdout else ''
 
 
 def get_title(desc: str, name: str) -> str:
@@ -167,8 +167,8 @@ def print_help(args: Namespace) -> None:
 
 def validate_name(name: str) -> None:
     "Ensure worktree name is valid"
-    if ' ' in name or '\t' in name:
-        sys.exit(f'error: worktree name "{name}" can not contain spaces or tabs.')
+    if any(c in name for c in ' \t\r\n'):
+        sys.exit(f'error: worktree name "{name}" can not contain whitespace.')
 
     if '\\' in name:
         sys.exit(f'error: worktree name "{name}" can not contain "\\".')
@@ -299,8 +299,12 @@ class Trees:
     def prompt(self) -> Tree | None:
         "Prompt user to select a worktree using fuzzy finder"
         if not (trees := self.get_trees()):
-            sys.exit('error: no worktrees to remove.')
-        line = run(shlex.split(self.fuzzy), stdin='\n'.join(trees)).strip()
+            sys.exit('error: no worktrees present.')
+
+        cmd = shlex.split(self.fuzzy)
+        stdin = '\n'.join(trees)
+        line = run(cmd, stdin=stdin, ignore_error=True).strip()
+
         if not line or line not in trees:
             return None
 
@@ -631,7 +635,8 @@ class rm:
                 if not (tree := trees.get_tree(name)):
                     sys.exit(f'error: no worktree found with name "{name}".')
 
-                deltrees.append(tree)
+                if tree not in deltrees:
+                    deltrees.append(tree)
 
         retpath = None
         for tree in deltrees:
