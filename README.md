@@ -273,7 +273,7 @@ Your path definition *must* at least contain the `{worktree}` placeholder.
 Most likely if you want to set a custom path then you will set `-P`
 as a [default option](#default-options).
 
-Note that the `--P/--path` setting is only relevant when adding a new
+Note that the `-P/--path` setting is only relevant when adding a new
 worktree using the `add` command. All other commands query your existing
 worktrees so will work regardless of how or where the worktrees were created.
 

@@ -6,11 +6,11 @@ worktrees. Prompts user with list of worktrees using fuzzy finder.
 import getpass
 import os
 import shlex
+import string
 import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ SHELLCODE = """
 !cmd() {
     local !envvar=""
     export !envvar
-    !envvar=$("!prog"!args "$@")
+    !envvar=$(!prog!args "$@")
     local r=$?
 
     if [ $r -ne 0 ]; then
@@ -63,13 +63,21 @@ SHELLCODE = """
 commands = []
 
 
+def shell_func_name_valid(name: str) -> bool:
+    "Return True if shell function name is valid"
+    if not name or name[0] in string.digits:
+        return False
+
+    valids = set(string.ascii_letters + string.digits + '_')
+    return all(c in valids for c in name)
+
+
 def init_code(cmd: str) -> str:
     "Return shell init code as string"
-    from string import Template
 
     # We need to change the template delimiter because the standard
     # delimiter "$" is too common in regular shell code .
-    class CTemplate(Template):
+    class CTemplate(string.Template):
         delimiter = '!'
 
     arglist = cmd.split(maxsplit=1)
@@ -79,8 +87,15 @@ def init_code(cmd: str) -> str:
     else:
         args = ''
 
+    if not shell_func_name_valid(cmd):
+        sys.exit(f'error: invalid shell command name "{cmd}".')
+
     return CTemplate(SHELLCODE.strip()).substitute(
-        envvar=ENVVAR, cmd=cmd, prog=sys.argv[0], args=args, QUIET_RETURN=QUIET_RETURN
+        envvar=ENVVAR,
+        cmd=cmd,
+        prog=shlex.quote(sys.argv[0]),
+        args=args,
+        QUIET_RETURN=QUIET_RETURN,
     )
 
 
@@ -90,15 +105,18 @@ def run(
     stdin: str | None = None,
     stdout: Any = subprocess.PIPE,
     ignore_error: bool = False,
-) -> str:
+) -> str | None:
     "Run command and return stdout"
     capture = stdout == subprocess.PIPE
     try:
         res = subprocess.run(cmd, stdout=stdout, text=capture, input=stdin)
     except Exception as e:
-        sys.exit(f'error: failed to run command "{cmd[0]}": {e}')
+        sys.exit(f'error: failed to run command "{cmd}": {e}')
 
-    if not ignore_error and res.returncode != 0:
+    if res.returncode != 0:
+        if ignore_error:
+            return None
+
         sys.exit(res.returncode)
 
     return res.stdout.strip() if capture and res.stdout else ''
@@ -108,10 +126,10 @@ def get_title(desc: str, name: str) -> str:
     "Return single title line from command description"
     res = []
     for line in desc.splitlines():
-        line = line.strip()
-        res.append(line)
-        if line.endswith('.'):
-            return ' '.join(res)
+        if line := line.strip():
+            res.append(line)
+            if line.endswith('.'):
+                return ' '.join(res)
 
     sys.exit(f'Must end {name} command description with a full stop.')
 
@@ -157,14 +175,6 @@ def print_version(args: Namespace) -> None:
     print(version, file=args._stdout)
 
 
-def print_help(args: Namespace) -> None:
-    "Print program help message"
-    if hasattr(args, 'parser'):
-        args.parser.print_help(args._stdout)
-    else:
-        args._opt.print_help(args._stdout)
-
-
 def validate_name(name: str) -> None:
     "Ensure worktree name is valid"
     if any(c in name for c in ' \t\r\n'):
@@ -175,15 +185,6 @@ def validate_name(name: str) -> None:
 
     if name.startswith(('-', '.')):
         sys.exit(f'error: worktree name "{name}" can not start with "-" or ".".')
-
-
-def get_branches() -> set[str]:
-    "Return set of existing branch names"
-    blist = run(
-        ('git', '--no-pager', 'branch', '-al', r'--format=%(refname:short)')
-    ).splitlines()
-    branches = {b.strip() for b in blist}
-    return branches | {b.rsplit('/', 1)[-1] for b in branches if '/' in b}
 
 
 def rm_parents(path: Path) -> None:
@@ -202,18 +203,51 @@ def rm_parents(path: Path) -> None:
             break
 
 
-@dataclass
+class Branches:
+    "Data for local and remote branches"
+
+    def __init__(self) -> None:
+        self.local = set()
+        self.remote = set()
+        self.remote_labels = set()
+
+        cmd = ('git', '--no-pager', 'branch', '-al', r'--format=%(refname) %(symref)')
+        lines = run(cmd) or ''
+
+        for line in lines.splitlines():
+            refname, _, symref = line.strip().partition(' ')
+            if not refname or symref:
+                continue
+
+            fields = refname.split('/', 2)
+            if len(fields) == 3 and fields[0] == 'refs':
+                match fields[1]:
+                    case 'heads':
+                        self.local.add(fields[2])
+                    case 'remotes':
+                        remote, _, branch = fields[2].partition('/')
+                        if remote and branch:
+                            self.remote_labels.add(remote)
+                            self.remote.add(branch)
+
+    def labels(self) -> set[str]:
+        "Return all names in all branch paths"
+        labels = self.remote_labels.copy()
+        labels.update(b for p in self.remote for b in p.split('/'))
+        labels.update(b for p in self.local for b in p.split('/'))
+        return labels
+
+
 class Tree:
     "Data for an individual worktree"
 
-    path: Path
-    path_display: str = ''
-    head: str = ''
-    branch: str = ''
-
-    def calc_path_display(self, args: Namespace):
-        "[Re]compute the displayed path to the worktree"
-        self.path_display = path_as_displayed(self.path, args)
+    def __init__(self, path: Path, args: Namespace) -> None:
+        self.path = path
+        self.path_display = path_as_displayed(path, args)
+        self.path_user = str(path if args.no_user else unexpanduser(path))
+        self.head = ''
+        self.branch = ''
+        self.attrs = set()
 
 
 class Trees:
@@ -221,35 +255,44 @@ class Trees:
 
     def __init__(self, args: Namespace) -> None:
         "Get worktrees"
+        try:
+            cwd = Path.cwd().resolve()
+        except Exception:
+            sys.exit('error: failed to resolve current working directory.')
+
+        cwdparts = cwd.parts
         trees = []
         tree = None
-        cwdparts = Path.cwd().resolve().parts
         phere = pindex = -1
         hash_len = args.hash_len
-        for line in run(('git', 'worktree', 'list', '--porcelain', '-z')).split('\0'):
-            if line and len(fields := line.split(maxsplit=1)) < 2:
+        out = run(('git', 'worktree', 'list', '--porcelain', '-z')) or ''
+        for line in out.split('\0'):
+            if not line:
                 continue
 
-            field, value = fields
+            field, _, value = line.partition(' ')
+            value = value.rstrip('\r\n')
+            match field:
+                case 'worktree':
+                    if value:
+                        path = Path(value)
+                        plen = len(path.parts)
+                        if path.parts == cwdparts[:plen] and plen > phere:
+                            phere = plen
+                            pindex = len(trees)
 
-            if field == 'worktree':
-                path = Path(value)
-                plen = len(path.parts)
-                if path.parts == cwdparts[:plen] and plen > phere:
-                    phere = plen
-                    pindex = len(trees)
-
-                tree = Tree(path)
-                tree.calc_path_display(args)
-                trees.append(tree)
-            elif tree:
-                if field == 'HEAD':
-                    if hash_len >= 0:
+                        trees.append(tree := Tree(path, args))
+                case 'HEAD':
+                    if tree and value and hash_len >= 0:
                         if hash_len == 0:
                             hash_len = len(value)
                         tree.head = value[:hash_len]
-                elif field == 'branch':
-                    tree.branch = value.split('/', maxsplit=2)[-1]
+                case 'branch':
+                    if tree and value:
+                        tree.branch = value.split('/', maxsplit=2)[-1]
+                case _:
+                    if tree and field:
+                        tree.attrs.add(field)
 
         if not trees:
             sys.exit('error: no worktrees found.')
@@ -261,7 +304,7 @@ class Trees:
             self.toplevel = trees[0]
 
         self.trees = trees
-        self.current = trees[0]
+        self.current = trees[0] if pindex >= 0 else None
         self.fuzzy = args.fuzzy
         self.hash_len = hash_len
 
@@ -274,12 +317,20 @@ class Trees:
             line = [f'{t.path_display:{width}}']
             if hash_len > 0:
                 line.append(f'{t.head:{hash_len}}')
-            line.append(f'[{t.branch}]' if t.branch else 'detached')
+
+            if t.branch:
+                line.append(f'[{t.branch}]')
+            elif not any(a not in t.attrs for a in ('detached', 'bare')):
+                line.append('detached')
+
+            if t.attrs:
+                line.append(' '.join(sorted(t.attrs)))
+
             trees.append(' '.join(line))
 
         return trees
 
-    def get_tree(self, name: str) -> Tree | None:
+    def get_tree(self, name: str) -> Tree:
         "Return worktree with given name, or None if not found"
         # Check for shortcut to top-level worktree
         if name == '/':
@@ -287,7 +338,22 @@ class Trees:
 
         # Check for shortcut to current worktree
         if name == '.':
+            if not self.current:
+                sys.exit('error: not inside any worktree.')
+
             return self.current
+
+        # If name starts with a slash/tilde, then assume it is a path to the worktree
+        if name and name[0] in ('/', '~'):
+            path = Path(name).expanduser().resolve(strict=False)
+            if not path.is_dir():
+                sys.exit('Worktree directory "{name}" does not exist')
+
+            for tree in self.trees:
+                if tree.path.samefile(path):
+                    return tree
+
+            sys.exit('Worktree directory "{name}" not found')
 
         for tree in self.trees:
             if tree.branch == name:
@@ -297,50 +363,43 @@ class Trees:
             if tree.path.name == name:
                 return tree
 
-        return None
+        sys.exit(f'error: no worktree found with name "{name}".')
 
     def prompt(self) -> Tree | None:
         "Prompt user to select a worktree using fuzzy finder"
         if not (trees := self.get_trees()):
             sys.exit('error: no worktrees present.')
 
-        cmd = shlex.split(self.fuzzy)
+        try:
+            cmd = shlex.split(self.fuzzy)
+        except Exception as e:
+            sys.exit(f'error: failed to parse fuzzy command "{self.fuzzy}": {e}')
+
         stdin = '\n'.join(trees)
-        line = run(cmd, stdin=stdin, ignore_error=True).strip()
+        out = run(cmd, stdin=stdin, ignore_error=True) or ''
+        line = out.strip()
 
         if not line or line not in trees:
             return None
 
         return self.trees[trees.index(line)]
 
-    def get_or_ask_tree(self, name: str) -> Tree | None:
-        "Return worktree with given name, or ask user for name"
-        if name:
-            if not (tree := self.get_tree(name)):
-                sys.exit(f'error: no worktree found with name "{name}".')
-        else:
-            # If no worktree name is given, prompt user to select one
-            tree = self.prompt()
-
-        return tree
-
-    def create_worktree(self, name: str, args: Namespace) -> Path:
+    def add_worktree(self, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
         if '{worktree}' not in (pathstr := args.path):
             sys.exit(
                 f'error: -P/--path "{pathstr}" must contain "{{worktree}}" placeholder.'
             )
 
-        branches = get_branches()
+        br = Branches()
 
         if name:
             validate_name(name)
         else:
             # If no name is given, generate a new name that does not conflict
-            # with existing worktrees or branches
-            excludes = {t.path.name for t in self.trees} | branches
+            # with existing branches or worktrees
+            excludes = br.labels() | {t.path.name for t in self.trees}
             excludes.update(n for t in self.trees if (n := t.path.parent.name))
-            excludes.update(p for b in branches if '/' in b for p in b.split('/'))
             name = generate_new_name(excludes)
 
         try:
@@ -364,18 +423,20 @@ class Trees:
         if args.detach:
             cmd.append('--detach')
         else:
-            if name not in branches:
+            # Create a new branch unless a local branch, or potentially
+            # trackable remote branch, with the same name already exists
+            if name not in (br.local | br.remote):
                 cmd.append('-b')
             cmd.append(name)
 
         run(cmd, stdout=args._stdout)
         return path
 
-    def remove_worktree(self, tree: Tree, args: Namespace) -> Path | None:
+    def remove_worktree(self, tree: Tree, br: Branches, args: Namespace) -> Path | None:
         "Remove the given worktree and branch"
         if tree == self.toplevel:
             print(
-                f'warning: not removing top-level worktree "{tree.path}"',
+                f'warning: not removing top-level worktree "{tree.path_user}"',
                 file=sys.stderr,
             )
             return None
@@ -384,10 +445,6 @@ class Trees:
             # Change to the top-level worktree directory before deleting this worktree
             # because we are removing the current directory
             os.chdir(newpath := self.toplevel.path)
-
-            # Recompute the displayed (possibly relative) path to the worktree
-            # from the new current directory
-            tree.calc_path_display(args)
         else:
             newpath = None
 
@@ -396,14 +453,15 @@ class Trees:
             cmd.append('--force')
 
         cmd.append(str(tree.path))
-        run(cmd, stdout=args._stdout)
+        if run(cmd, stdout=args._stdout, ignore_error=True) is None:
+            return None
 
-        print(f'Removed worktree "{tree.path_display}"', file=args._stdout)
+        print(f'Removed worktree "{tree.path_user}"', file=args._stdout)
 
         # Also remove parent directories of the worktree if they are empty
         rm_parents(tree.path)
 
-        if tree.branch and not args.keep_branch:
+        if tree.branch and not args.keep_branch and tree.branch in br.local:
             cmd = ('git', 'branch', '-D' if args.force else '-d', tree.branch)
             run(cmd, stdout=args._stdout, ignore_error=True)
 
@@ -501,16 +559,20 @@ def main() -> int:
         if hasattr(cls, 'init'):
             cls.init(cmdopt)
 
-        # Add the help option for this command
+        # Add help option for this command. Use a different dest to not
+        # overwrite the global help option
         cmdopt.add_argument(
-            '-h', '--help', action='store_true', help='show help message and exit'
+            '-h',
+            '--help',
+            dest='help_command',
+            action='store_true',
+            help='show help message and exit',
         )
 
         # Set the function to call
         cmdopt.set_defaults(func=cls.run, parser=cmdopt)
 
     args = opt.parse_args()
-    args._opt = opt
     args._running_in_shell = running_in_shell
 
     # Work out the state of the toggle options
@@ -528,10 +590,14 @@ def main() -> int:
         args._stdout = sys.stdout
         shell_return = 0
 
-    if args.version:
+    if args.help:
+        opt.print_help(args._stdout)
+    elif args.version:
         print_version(args)
-    elif args.help or 'func' not in args or '-h' in sys.argv or '--help' in sys.argv:
-        print_help(args)
+    elif not hasattr(args, 'func'):
+        opt.print_help(args._stdout)
+    elif args.help_command:
+        args.parser.print_help(args._stdout)
     elif out := args.func(args):
         print(out)
         shell_return = 0
@@ -543,9 +609,10 @@ def main() -> int:
     return shell_return
 
 
-def Command(command: type) -> None:
+def Command(command: type) -> type:
     "Decorator to add given command class to list of commands"
     commands.append(command)
+    return command
 
 
 @Command
@@ -576,12 +643,12 @@ class add:
     @staticmethod
     def run(args: Namespace) -> str | None:
         trees = Trees(args)
-        retpath = None
+        newpath = None
         for name in args.worktree or ['']:
-            if (path := trees.create_worktree(name, args)) and not retpath:
-                retpath = path
+            if path := trees.add_worktree(name, args):
+                newpath = path if path.is_dir() else None
 
-        return str(retpath) if retpath and not args.no_cd else None
+        return str(newpath) if newpath and not args.no_cd else None
 
 
 @Command
@@ -635,18 +702,17 @@ class rm:
         else:
             deltrees = []
             for name in args.worktree:
-                if not (tree := trees.get_tree(name)):
-                    sys.exit(f'error: no worktree found with name "{name}".')
-
-                if tree not in deltrees:
+                if (tree := trees.get_tree(name)) not in deltrees:
                     deltrees.append(tree)
 
-        retpath = None
-        for tree in deltrees:
-            if (path := trees.remove_worktree(tree, args)) and not retpath:
-                retpath = path
+        br = Branches()
+        newpath = None
 
-        return str(retpath) if retpath else None
+        for tree in deltrees:
+            if path := trees.remove_worktree(tree, br, args):
+                newpath = path
+
+        return str(newpath) if newpath else None
 
 
 @Command
@@ -666,7 +732,7 @@ class cd:
     @staticmethod
     def run(args: Namespace) -> str | None:
         trees = Trees(args)
-        tree = trees.get_or_ask_tree(args.worktree)
+        tree = trees.get_tree(args.worktree) if args.worktree else trees.prompt()
         return str(tree.path) if tree else None
 
 
