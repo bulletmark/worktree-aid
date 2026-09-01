@@ -753,7 +753,7 @@ class ls:
 class init:
     doc = f"""
     Output shell initialization code and set default options.
-    Must be invoked using `source <({PROG} init)` in your shell `~/.bashrc` or
+    Should be invoked using `source <({PROG} init)` in your shell `~/.bashrc` or
     `~/.zshrc` initialization file to create the shell alias/function by which
     you invoke this program. You can also append preferred default options to
     the command name, e.g. `source <({PROG} init \"wt -r\")`.

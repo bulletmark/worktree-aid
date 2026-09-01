@@ -158,7 +158,7 @@ aliases: l, list
 ```
 usage: wt init [-h] [command]
 
-Output shell initialization code and set default options. Must be invoked
+Output shell initialization code and set default options. Should be invoked
 using `source <(worktree-aid init)` in your shell `~/.bashrc` or `~/.zshrc`
 initialization file to create the shell alias/function by which you invoke
 this program. You can also append preferred default options to the command
