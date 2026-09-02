@@ -7,7 +7,8 @@ a [git] repository but are under-appreciated by many perhaps because the
 interface is somewhat cumbersome to use. `worktree-aid` is a command line tool
 to make using [git worktrees][gitw] more convenient. It allows you to easily
 add, remove, and change directories for [git worktrees][gitw]. Users can be
-prompted with list of worktrees using a [fuzzy finder][fzf].
+prompted with list of worktrees using a [fuzzy finder][fzf]. `worktree-aid` runs
+on Linux, macOS, and Windows (via WSL).
 
 After following the instructions in the [Installation](#installation-or-upgrade)
 and [Setup](#setup) sections below, a `wt` shell command/alias is available to
