@@ -189,8 +189,8 @@ def validate_name(name: str) -> None:
 
 def rm_parents(path: Path) -> None:
     "Remove empty parent directories of worktree path"
-    for p in path.parents:
-        if not p.is_dir() or p.samefile(HOME):
+    for depth, p in enumerate(path.parents):
+        if not p or not p.is_dir() or p.samefile(HOME):
             break
 
         # Stop removing parent directories if any files exist in this directory
@@ -200,6 +200,10 @@ def rm_parents(path: Path) -> None:
         try:
             p.rmdir()
         except Exception:
+            break
+
+        # Limit removing parent directories
+        if depth >= 2:
             break
 
 
@@ -480,10 +484,12 @@ def main() -> int:
     # QUIET_RETURN = Caller will silently quit and return exit code 0.
 
     # We need to determine if we are running in a shell function.
-    # Also, Python 3.14 added color help/usage output but has a bug when
+    running_in_shell = ENVVAR in os.environ
+
+    # Python 3.14 argparse added color help/usage output but has a bug when
     # outputting to a device other than stdout, so we override auto-detection.
     # See https://github.com/python/cpython/issues/156144
-    if (running_in_shell := ENVVAR in os.environ) and sys.version_info[:2] == (3, 14):
+    if running_in_shell and sys.version_info[:2] == (3, 14):
         os.environ['FORCE_COLOR'] = '1'
 
     # Parse arguments
