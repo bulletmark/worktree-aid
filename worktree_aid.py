@@ -105,8 +105,12 @@ def run(
     stdin: str | None = None,
     stdout: Any = subprocess.PIPE,
     ignore_error: bool = False,
+    debug: bool = False,
 ) -> str | None:
     "Run command and return stdout"
+    if debug:
+        print(cmd, file=sys.stderr)
+
     capture = stdout == subprocess.PIPE
     try:
         res = subprocess.run(cmd, stdout=stdout, text=capture, input=stdin)
@@ -324,7 +328,7 @@ class Trees:
 
             if t.branch:
                 line.append(f'[{t.branch}]')
-            elif not any(a not in t.attrs for a in ('detached', 'bare')):
+            elif not any(a in t.attrs for a in ('detached', 'bare')):
                 line.append('detached')
 
             if t.attrs:
@@ -348,16 +352,16 @@ class Trees:
             return self.current
 
         # If name starts with a slash/tilde, then assume it is a path to the worktree
-        if name and name[0] in ('/', '~'):
+        if name and (name[0] in ('/', '~')) or name.startswith(('./', '../')):
             path = Path(name).expanduser().resolve(strict=False)
             if not path.is_dir():
-                sys.exit('Worktree directory "{name}" does not exist')
+                sys.exit(f'Worktree directory "{name}" does not exist')
 
             for tree in self.trees:
                 if tree.path.samefile(path):
                     return tree
 
-            sys.exit('Worktree directory "{name}" not found')
+            sys.exit(f'Worktree directory "{name}" not found')
 
         for tree in self.trees:
             if tree.branch == name:
@@ -431,7 +435,15 @@ class Trees:
             # trackable remote branch, with the same name already exists
             if name not in (br.local | br.remote):
                 cmd.append('-b')
+            elif args.base:
+                sys.exit(
+                    f'error: cannot specify -b/--base with branch "{name}" that already exists.'
+                )
+
             cmd.append(name)
+
+        if args.base:
+            cmd.append(args.base)
 
         run(cmd, stdout=args._stdout)
         return path
@@ -638,6 +650,11 @@ class add:
             '--no-cd',
             action='store_true',
             help='do not change directory to new worktree after adding it',
+        )
+        parser.add_argument(
+            '-b',
+            '--base',
+            help='base commit-ish to create worktree from, default is current HEAD.',
         )
         parser.add_argument(
             'worktree',

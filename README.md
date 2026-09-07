@@ -83,19 +83,22 @@ Type `wt <command> -h` to see specific help/usage for any individual command:
 ### Command `add`
 
 ```
-usage: wt add [-d] [-c] [-h] [worktree ...]
+usage: wt add [-d] [-c] [-b BASE] [-h] [worktree ...]
 
 Add new worktree + branch.
 
 positional arguments:
-  worktree      new worktree + branch to add. A name is automatically created
-                if not specified. Can also specify an existing branch name to
-                create a new worktree for that branch.
+  worktree         new worktree + branch to add. A name is automatically
+                   created if not specified. Can also specify an existing
+                   branch name to create a new worktree for that branch.
 
 options:
-  -d, --detach  add detached worktree only, i.e. without adding a new branch
-  -c, --no-cd   do not change directory to new worktree after adding it
-  -h, --help    show help message and exit
+  -d, --detach     add detached worktree only, i.e. without adding a new
+                   branch
+  -c, --no-cd      do not change directory to new worktree after adding it
+  -b, --base BASE  base commit-ish to create worktree from, default is current
+                   HEAD.
+  -h, --help       show help message and exit
 
 aliases: a
 ```
