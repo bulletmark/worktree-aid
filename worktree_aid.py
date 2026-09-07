@@ -427,18 +427,22 @@ class Trees:
             dpath = path_as_displayed(path, args)
             sys.exit(f'error: worktree path "{dpath}" already exists.')
 
+        # Check if a local or remote branch with the same name already exists
+        existing_branch = name in (br.local | br.remote)
+
+        if existing_branch and args.base:
+            sys.exit(
+                f'error: cannot specify -b/--base with branch "{name}" that already exists.'
+            )
+
         cmd = ['git', 'worktree', 'add', str(path)]
         if args.detach:
             cmd.append('--detach')
         else:
             # Create a new branch unless a local branch, or potentially
             # trackable remote branch, with the same name already exists
-            if name not in (br.local | br.remote):
+            if not existing_branch:
                 cmd.append('-b')
-            elif args.base:
-                sys.exit(
-                    f'error: cannot specify -b/--base with branch "{name}" that already exists.'
-                )
 
             cmd.append(name)
 
