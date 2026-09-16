@@ -140,10 +140,12 @@ def get_title(desc: str, name: str) -> str:
 
 def unexpanduser(path: Path) -> Path:
     "Return path name, with $HOME replaced by ~ (opposite of Path.expanduser())"
-    if path.parts[: len(HOME.parts)] != HOME.parts:
-        return path
+    startlen = len(hparts := HOME.parts)
+    parts = path.parts
+    if parts[:startlen] == hparts:
+        path = Path('~', *parts[startlen:])
 
-    return Path('~', *path.parts[len(HOME.parts) :])
+    return path
 
 
 def path_as_displayed(path: Path, args: Namespace) -> str:
