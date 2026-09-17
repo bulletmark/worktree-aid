@@ -246,7 +246,7 @@ The above sets `-r` (for relative display of worktree directories) as default
 for your `wt` command.
 
 The following options are sensible candidates to set as default options:
-`-P/--path`, `-r/--relative`, `-u/--no-user`, `-F/--fuzzy`.
+`-P/--path`, `-r/--relative`, `-u/--no-user`, `-F/--fuzzy`, `-H/--hash-len`.
 
 ## Directory Path Template for new Worktree Creation
 
