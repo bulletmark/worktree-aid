@@ -340,8 +340,8 @@ class Trees:
 
         return trees
 
-    def get_tree(self, name: str) -> Tree:
-        "Return worktree with given name, or None if not found"
+    def get_tree_shortcut(self, name: str) -> Tree | None:
+        "Return worktree for given shortcut name, or None if not found"
         # Check for shortcut to top-level worktree
         if name == '/':
             return self.toplevel
@@ -352,6 +352,13 @@ class Trees:
                 sys.exit('error: not inside any worktree.')
 
             return self.current
+
+        return None
+
+    def get_tree(self, name: str) -> Tree:
+        "Return worktree with given name, or None if not found"
+        if tree := self.get_tree_shortcut(name):
+            return tree
 
         # If name starts with a slash/tilde, then assume it is a path to the worktree
         if name and (name[0] in ('/', '~')) or name.startswith(('./', '../')):
@@ -387,12 +394,13 @@ class Trees:
 
         stdin = '\n'.join(trees)
         out = run(cmd, stdin=stdin, ignore_error=True) or ''
-        line = out.strip()
-
-        if not line or line not in trees:
+        if not (line := out.strip()):
             return None
 
-        return self.trees[trees.index(line)]
+        if tree := self.get_tree_shortcut(line):
+            return tree
+
+        return self.trees[trees.index(line)] if line in trees else None
 
     def add_worktree(self, name: str, args: Namespace) -> Path:
         "Create a new worktree and branch with the given name"
